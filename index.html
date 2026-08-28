@@ -3,64 +3,45 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Central Station — speaking scenario PoC</title>
+<title>Get to Brighton — journey PoC</title>
 <style>
   :root{
-    --board:#0d1117;        /* departure-board dark */
-    --board-2:#161d27;
-    --amber:#ffb000;        /* dot-matrix amber */
-    --amber-dim:#7a5600;
-    --platform:#eef1f4;     /* cool station light, deliberately NOT warm cream */
-    --paper:#ffffff;
-    --ink:#1a1f26;
-    --ink-soft:#5b6672;
-    --br-red:#c8102e;       /* British Rail double-arrow red, used sparingly */
-    --line:#d7dde3;
-    --clerk:#e9eef3;
-    --learner:#1a1f26;
-    --ok:#2f7d4f;
-    --warn:#c8102e;
-    --focus:#1b6ef3;
+    --board:#0d1117; --board-2:#161d27; --amber:#ffb000; --amber-dim:#7a5600;
+    --platform:#eef1f4; --paper:#ffffff; --ink:#1a1f26; --ink-soft:#5b6672;
+    --br-red:#c8102e; --line:#d7dde3; --clerk:#e9eef3; --focus:#1b6ef3;
   }
   *{box-sizing:border-box}
   html,body{margin:0}
-  body{
-    background:var(--platform);
-    color:var(--ink);
-    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-    line-height:1.5;
-    -webkit-font-smoothing:antialiased;
-  }
+  body{background:var(--platform);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
   .mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
   .wrap{max-width:1120px;margin:0 auto;padding:20px 18px 60px}
 
-  /* ---- header / signage ---- */
-  header.sign{
-    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
-    border-bottom:2px solid var(--ink);padding-bottom:14px;margin-bottom:18px;
-  }
+  header.sign{display:flex;align-items:center;gap:14px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:14px;margin-bottom:14px}
   .arrows{color:var(--br-red);font-weight:800;font-size:24px;letter-spacing:-2px}
-  .sign h1{
-    font-size:19px;margin:0;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
-  }
-  .goal{
-    margin-left:auto;font-size:13px;color:var(--ink-soft);
-    border:1px solid var(--line);border-radius:2px;padding:5px 10px;background:var(--paper)
-  }
+  .sign h1{font-size:19px;margin:0;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+  .goal{margin-left:auto;font-size:13px;color:var(--ink-soft);border:1px solid var(--line);border-radius:2px;padding:5px 10px;background:var(--paper)}
   .goal b{color:var(--ink)}
+
+  /* journey progress */
+  .journey{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+  .leg{flex:1;min-width:90px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;text-align:center;padding:6px 4px;border-radius:3px;background:#e2e7ec;color:#8a95a1;border:1px solid transparent}
+  .leg.done{background:#dfeee4;color:#2f7d4f}
+  .leg.now{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+  .toggle{display:flex;align-items:center;gap:8px;margin:2px 0 12px;font-size:13px;color:var(--ink-soft)}
+  .switch{position:relative;width:40px;height:22px;background:var(--line);border-radius:20px;cursor:pointer;transition:.15s;border:0;flex:none}
+  .switch::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.15s}
+  .switch.on{background:var(--ink)}
+  .switch.on::after{left:20px}
+  .mhint{color:var(--br-red);font-size:12px;margin-left:2px}
 
   .grid{display:grid;grid-template-columns:1fr 340px;gap:18px;align-items:start}
   @media(max-width:820px){.grid{grid-template-columns:1fr}}
 
-  /* ---- resource cards ---- */
   .card{background:var(--paper);border:1px solid var(--line);border-radius:4px;margin-bottom:14px;overflow:hidden}
-  .card > .head{
-    display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);
-    font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-soft);font-weight:700
-  }
+  .card > .head{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-soft);font-weight:700}
   .head .tag{margin-left:auto;font-size:10px;color:var(--amber-dim);border:1px solid var(--amber-dim);border-radius:2px;padding:1px 6px;letter-spacing:.06em}
 
-  /* departure board */
   .board{background:var(--board);color:var(--amber);border-color:#000}
   .board .head{color:#c9922e;border-bottom-color:#242c38}
   .board table{width:100%;border-collapse:collapse;font-size:13px}
@@ -71,63 +52,50 @@
   .board .stat-warn{color:#ff5a5a}
   .board .stat-canc{color:#ff5a5a;text-decoration:line-through}
 
-  /* voice message */
   .vm .body{padding:12px}
-  .vm .who{font-weight:700;font-size:13px;margin-bottom:6px}
   .playbar{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-  .playbtn{
-    border:1px solid var(--line);background:var(--platform);border-radius:40px;padding:5px 14px;
-    font-size:13px;cursor:pointer;font-weight:600
-  }
+  .playbtn{border:1px solid var(--line);background:var(--platform);border-radius:40px;padding:5px 14px;font-size:13px;cursor:pointer;font-weight:600}
   .playbtn:hover{border-color:var(--ink-soft)}
   .vm .transcript{font-size:13.5px;color:var(--ink);background:var(--platform);border-radius:3px;padding:10px;display:none}
   .vm.open .transcript{display:block}
   .vm .hint{font-size:11px;color:var(--ink-soft);margin-top:6px}
 
-  /* ---- conversation ---- */
-  .conv{min-height:420px;display:flex;flex-direction:column}
-  .conv .stage{padding:10px 12px;flex:1;overflow-y:auto;max-height:52vh}
+  .conv{min-height:440px;display:flex;flex-direction:column}
+  .conv .stage{padding:10px 12px;flex:1;overflow-y:auto;max-height:56vh}
   .turn{margin:10px 0;display:flex}
   .bubble{max-width:82%;padding:9px 13px;border-radius:14px;font-size:14.5px}
-  .clerk-turn .bubble{background:var(--clerk);border-bottom-left-radius:3px}
+  .npc-turn .bubble{background:var(--clerk);border-bottom-left-radius:3px}
   .learner-turn{justify-content:flex-end}
   .learner-turn .bubble{background:var(--ink);color:#fff;border-bottom-right-radius:3px}
   .name{font-size:11px;color:var(--ink-soft);margin:0 6px 2px;text-transform:uppercase;letter-spacing:.07em}
-  .traveller-turn .bubble{background:#fff6e5;border:1px solid #ffd27a;border-bottom-left-radius:3px}
-  .sys{margin:12px 6px;text-align:center;font-size:12px;color:var(--br-red);
-    border-top:1px dashed #e2b7bd;border-bottom:1px dashed #e2b7bd;padding:7px 4px;letter-spacing:.03em}
+  .narr{margin:14px 8px;text-align:center;font-size:12.5px;color:var(--ink-soft);font-style:italic}
+  .sys{margin:12px 6px;text-align:center;font-size:12px;color:var(--br-red);border-top:1px dashed #e2b7bd;border-bottom:1px dashed #e2b7bd;padding:7px 4px;letter-spacing:.03em}
   .waiting{color:var(--ink-soft);font-size:13px;padding:8px 6px;font-style:italic}
 
   .composer{border-top:1px solid var(--line);padding:10px;display:flex;gap:8px}
-  .composer input{
-    flex:1;border:1px solid var(--line);border-radius:20px;padding:9px 14px;font-size:14.5px;font-family:inherit
-  }
+  .composer input{flex:1;border:1px solid var(--line);border-radius:20px;padding:9px 14px;font-size:14.5px;font-family:inherit}
   .composer input:focus{outline:2px solid var(--focus);outline-offset:1px;border-color:transparent}
-  .composer button{
-    border:0;background:var(--ink);color:#fff;border-radius:20px;padding:9px 16px;font-size:14px;font-weight:600;cursor:pointer
-  }
+  .composer button{border:0;background:var(--ink);color:#fff;border-radius:20px;padding:9px 16px;font-size:14px;font-weight:600;cursor:pointer}
   .composer button:disabled{opacity:.4;cursor:default}
   .mic{border:1px solid var(--line);background:var(--paper);border-radius:20px;padding:9px 12px;font-size:15px;cursor:pointer;line-height:1}
-  .mic:hover{border-color:var(--ink-soft)}
   .mic.live{border-color:var(--br-red);box-shadow:0 0 0 3px rgba(200,16,46,.15)}
-  .mhint{color:var(--br-red);font-size:12px;margin-left:2px}
 
   .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
-  .ghost{
-    border:1px solid var(--line);background:var(--paper);border-radius:3px;padding:7px 11px;font-size:12.5px;cursor:pointer;font-weight:600;color:var(--ink)
-  }
+  .ghost{border:1px solid var(--line);background:var(--paper);border-radius:3px;padding:7px 11px;font-size:12.5px;cursor:pointer;font-weight:600;color:var(--ink)}
   .ghost:hover{border-color:var(--ink-soft)}
-  .ghost.armed{border-color:var(--br-red);color:var(--br-red)}
-  .ghost:disabled{opacity:.4;cursor:default}
+  .note{font-size:11.5px;color:var(--ink-soft);margin-top:10px;line-height:1.45}
 
-  /* ---- researcher stream ---- */
-  .researcher{position:sticky;top:14px}
+  .researcher.card{border-color:#000;background:var(--board);color:#c7d0da;position:sticky;top:14px}
   .researcher .head{color:#fff;background:var(--board-2);border-bottom-color:#000}
-  .researcher.card{border-color:#000;background:var(--board);color:#c7d0da}
   .rgroup{padding:11px 12px;border-bottom:1px solid #1e2732;font-size:12.5px}
   .rgroup:last-child{border-bottom:0}
   .rlabel{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#7f8b98;margin-bottom:5px}
   .hyp{color:#e7edf3;font-size:13.5px}
+  .coping{margin-top:8px;font-size:11px}
+  .cp{display:inline-block;padding:2px 8px;border-radius:20px;background:#1a222d;color:#9aa6b2;text-transform:capitalize}
+  .cp.comfortable{background:#12351f;color:#5fd08a}
+  .cp.stretched{background:#3a2f10;color:#e7c14e}
+  .cp.struggling{background:#3a1720;color:#ef7a8c}
   .brk{display:flex;gap:6px;margin-top:8px}
   .pip{flex:1;text-align:center;font-size:10px;text-transform:uppercase;letter-spacing:.06em;padding:4px 0;border-radius:2px;background:#1a222d;color:#5f6b78}
   .pip.on{background:var(--amber);color:#241900;font-weight:700}
@@ -135,18 +103,10 @@
   .bignum{font-size:30px;font-weight:800;color:var(--amber);font-family:ui-monospace,monospace;line-height:1}
   .by{font-size:11.5px;color:#9aa6b2}
   .by b{color:#e7edf3}
-  .log{max-height:180px;overflow-y:auto;font-size:11.5px;color:#95a1ad}
+  .log{max-height:200px;overflow-y:auto;font-size:11.5px;color:#95a1ad}
   .log div{padding:4px 0;border-top:1px dotted #26303c}
   .log div:first-child{border-top:0}
   .log .d{color:#c9922e;font-family:ui-monospace,monospace;margin-right:6px}
-
-  .toggle{display:flex;align-items:center;gap:8px;margin:2px 0 14px;font-size:13px;color:var(--ink-soft)}
-  .switch{position:relative;width:40px;height:22px;background:var(--line);border-radius:20px;cursor:pointer;transition:.15s;border:0}
-  .switch::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.15s}
-  .switch.on{background:var(--ink)}
-  .switch.on::after{left:20px}
-
-  .note{font-size:11.5px;color:var(--ink-soft);margin-top:10px;line-height:1.45}
   @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -155,73 +115,60 @@
 
   <header class="sign">
     <span class="arrows" aria-hidden="true">&#8644;</span>
-    <h1>Central Station</h1>
-    <div class="goal">Your goal: <b>get to Brighton before 18:00</b></div>
+    <h1>Get to Brighton</h1>
+    <div class="goal">Your goal: <b>be in Brighton before 18:00</b></div>
   </header>
+
+  <div class="journey" id="journey"></div>
 
   <div class="toggle">
     <button id="rswitch" class="switch" role="switch" aria-checked="false" aria-label="Researcher view"></button>
-    <span>Researcher view <span id="rstate">off</span> — reveals the profiling stream running alongside the scene</span>
+    <span>Researcher view <span id="rstate">off</span> — the profiling stream, running across the whole journey</span>
   </div>
-
   <div class="toggle">
     <button id="sswitch" class="switch" role="switch" aria-checked="false" aria-label="Speech mode"></button>
-    <span>Speak <span id="sstate">off</span> — talk to the clerk and hear the replies (best in Chrome/Edge; rough browser voices) <span id="micHint" class="mhint"></span></span>
+    <span>Speak <span id="sstate">off</span> — talk and hear the replies (best in Chrome/Edge) <span id="micHint" class="mhint"></span></span>
   </div>
 
   <div class="grid">
-    <!-- LEFT: the world the learner is in -->
     <div>
-      <!-- departure board (revisitable) -->
       <div class="card board">
         <div class="head">Departures <span class="tag">check any time</span></div>
-        <table>
-          <thead><tr><th>Time</th><th>Destination</th><th>Plat</th><th>Status</th></tr></thead>
-          <tbody id="boardBody"></tbody>
-        </table>
+        <table><thead><tr><th>Time</th><th>Destination</th><th>Plat</th><th>Status</th></tr></thead>
+        <tbody id="boardBody"></tbody></table>
       </div>
 
-      <!-- voice message (revisitable) -->
       <div class="card vm" id="vm">
         <div class="head">Voice message &middot; Linh <span class="tag">replay any time</span></div>
         <div class="body">
           <div class="playbar">
             <button class="playbtn" id="vmPlay">&#9654;&nbsp; Play (0:07)</button>
-            <span class="hint" id="vmHint">The clerk can't hear this — it's yours.</span>
+            <span class="hint">Nobody in the station can hear this — it's yours.</span>
           </div>
-          <div class="transcript" id="vmText">
-            &ldquo;Hi, it's Linh! Don't forget the thing starts at six on the dot, so you have to be in
-            Brighton <b>before six</b>. Don't be late — see you there!&rdquo;
-          </div>
+          <div class="transcript" id="vmText">&ldquo;Hi, it's Linh! Don't forget the thing starts at six on the dot, so you have to be in Brighton <b>before six</b>. Don't be late — see you there!&rdquo;</div>
         </div>
       </div>
 
-      <!-- conversation -->
       <div class="card conv">
-        <div class="head">Ticket window <span class="tag" id="npcState">clerk waiting</span></div>
-        <div class="stage" id="stage">
-          <div class="waiting" id="opener">Dave is behind the counter, sorting tickets. He hasn't noticed you yet — walk up and say something to begin.</div>
-        </div>
+        <div class="head" id="sceneHead">Your journey <span class="tag" id="npcState">&nbsp;</span></div>
+        <div class="stage" id="stage"></div>
         <div class="composer">
           <button id="micBtn" class="mic" title="Tap to speak" aria-label="Tap to speak" style="display:none">&#127908;</button>
-          <input id="say" type="text" placeholder="Type what you'd say to the clerk…" autocomplete="off">
+          <input id="say" type="text" placeholder="Type what you'd say…" autocomplete="off">
           <button id="sendBtn">Say</button>
         </div>
       </div>
 
-      <div class="controls">
-        <button class="ghost" id="eventBtn">&#128227; Trigger the delay announcement</button>
-        <button class="ghost" id="resetBtn">Reset scenario</button>
-      </div>
+      <div class="controls"><button class="ghost" id="resetBtn">Restart journey</button></div>
       <div class="note" id="envNote"></div>
     </div>
 
-    <!-- RIGHT: the profiling stream (researcher only) -->
     <div class="researcher card" id="researcher" style="display:none">
       <div class="head">Profiling stream</div>
       <div class="rgroup">
         <div class="rlabel">Working hypothesis</div>
         <div class="hyp" id="hyp">No evidence yet.</div>
+        <div class="coping" id="copingWrap" style="display:none">Now: <span class="cp" id="coping"></span></div>
         <div class="brk" id="brk">
           <span class="pip" data-b="gathering">gathering</span>
           <span class="pip" data-b="emerging">emerging</span>
@@ -229,14 +176,11 @@
         </div>
       </div>
       <div class="rgroup">
-        <div class="rlabel">Help metric — times help was taken</div>
-        <div class="counts">
-          <div class="bignum" id="helpNum">0</div>
-          <div class="by" id="helpBy">none yet</div>
-        </div>
+        <div class="rlabel">Help metric — times the interlocutor had to scaffold</div>
+        <div class="counts"><div class="bignum" id="helpNum">0</div><div class="by" id="helpBy">none yet</div></div>
       </div>
       <div class="rgroup">
-        <div class="rlabel">Evidence log</div>
+        <div class="rlabel">Evidence log (whole journey)</div>
         <div class="log" id="log"><div style="color:#5f6b78">Waiting for the first turn…</div></div>
       </div>
     </div>
@@ -244,306 +188,312 @@
 </div>
 
 <script>
-const MODEL = "claude-sonnet-4-6";
+/* ---------------- scenes: the cast and the journey ---------------- */
+const SCENES = [
+  {
+    id:"taxi", leg:"Taxi", title:"In the taxi", speaker:"driver", name:"Cabbie", demand:"A2",
+    shape:"transaction", goal:"pay the fare and get out at the station",
+    complete_when:"the fare has been paid and the passenger is heading off",
+    opening:[{who:"narr",text:"Your taxi pulls up outside the station."},
+             {who:"driver",text:"Here we are — that'll be eighteen fifty."}],
+    system:()=>`You are a friendly London cabbie who has just pulled up outside the railway station and said
+"Here we are — that'll be eighteen fifty." You want your fare and to be on your way. Reply as the cabbie only,
+one or two short spoken sentences. If the passenger fumbles the words, do what a cabbie does — say it again
+simply, or echo back what they meant so they can use it — but never explain English or comment on how they talk,
+and don't teach or quiz. Once they've paid (cash, card, or "keep the change"), wish them well. You don't know
+where they're going or why unless they say.`
+  },
+  {
+    id:"tickets", leg:"Ticket window", title:"At the ticket window", speaker:"clerk", name:"Dave · clerk", demand:"B1",
+    shape:"transaction", goal:"buy a ticket to Brighton",
+    complete_when:"a ticket to Brighton has been bought — destination, single/return, any needed detail, and payment all settled",
+    opening:[{who:"narr",text:"Inside, you go to the ticket window. Dave is behind the counter, sorting tickets — he hasn't noticed you yet."}],
+    system:()=>`You are Dave, a ticket clerk at a British railway station — pleasant, brisk, ordinary. Reply as Dave
+only, one or two short sentences. You know: the next direct Brighton train is 16:50, platform 4, in at 17:35; a
+return is £24; the 16:35 was cancelled. Ask only what you need to sell the ticket. If the passenger doesn't follow
+you, say it again more simply or echo the right words back so they can reuse them — but never explain English words,
+comment on how they speak, teach or quiz. You don't know why or by when they're travelling unless they tell you.`
+  },
+  {
+    id:"platform", leg:"Platform (disruption)", title:"On the platform", speaker:"guard", name:"Guard", demand:"B2",
+    shape:"problem", goal:"with the 16:50 cancelled, settle on a way to still reach Brighton",
+    complete_when:"the passenger has settled on a plan — chosen a specific train — or has explicitly accepted they cannot make it before six",
+    opening:[{who:"narr",text:"Ticket in hand, you reach the platform."},
+             {who:"tannoy",text:"TANNOY: \u201CAttention please. The 16:50 service to Brighton is cancelled. We apologise for the disruption.\u201D"},
+             {who:"narr",text:"A guard is standing nearby."}],
+    system:()=>`You are a calm, capable platform guard. There is disruption today and the 16:50 direct to Brighton
+has just been cancelled. Options to Brighton that you know: the 17:10 to Gatwick then change, reaching Brighton about
+18:10; a later direct at 17:40, in at 18:25; and — if they are quick — a fast 16:58 from platform 6 that gets into
+Brighton at 17:42. You want to get each passenger sorted and moving. Reply as the guard only, one or two short
+sentences. If the passenger struggles to say something, echo the right words back or offer the phrase so they can use
+it — never explain grammar, drill, or grade their English. You don't know why they are travelling or by when unless
+they tell you. Because of the cancellation, ask where they're heading and — importantly — by when they need to be
+there, so you can steer them; only the passenger knows their own deadline. If they give a time, help them weigh the
+trains against it (the fast 16:58 makes it before six; the later ones do not).`
+  },
+  {
+    id:"passenger", leg:"Fellow passenger", title:"Waiting for the train", speaker:"passenger", name:"A fellow passenger", demand:"B1",
+    shape:"social", goal:"hold a short, natural social exchange (no transaction)",
+    complete_when:"the small talk has run its course and reached a natural lull — there is nothing to complete or achieve",
+    opening:[{who:"narr",text:"You find a spot to wait. Someone waiting beside you glances over."},
+             {who:"passenger",text:"Off somewhere nice?"}],
+    system:()=>`You are a chatty fellow passenger waiting on the platform, making small talk. You just asked
+"Off somewhere nice?" Keep it light and social — one or two short sentences, real small talk, not an interview.
+React like a person: if they mention being in a hurry or the delays, sympathise and chat about it. If they reach for
+a word, help the way a friendly stranger naturally would — supply it, echo them — but don't correct or teach them like
+a lesson. You have nowhere in particular to be. After a couple of friendly exchanges, let the chat wind down naturally.`
+  }
+];
 
-/* ---------- scenario data ---------- */
 const BOARD_BEFORE = [
   ["16:35","Brighton","—","Cancelled","stat-canc"],
   ["16:50","Brighton","4","On time","stat-ok"],
   ["17:10","Gatwick Airport","2","On time","stat-ok"],
 ];
-const BOARD_AFTER = [
-  ["16:35","Brighton","—","Cancelled","stat-canc"],
-  ["16:50","Brighton","4","Departed","stat-warn"],
-  ["17:10","Gatwick Airport","2","Delayed 17:30","stat-warn"],
-  ["17:40","Brighton","6","On time","stat-ok"],
+const BOARD_DISRUPT = [
+  ["16:50","Brighton","4","Cancelled","stat-canc"],
+  ["16:58","Brighton (fast)","6","On time","stat-ok"],
+  ["17:10","Gatwick Airport","2","On time","stat-ok"],
+  ["17:40","Brighton","4","On time","stat-ok"],
 ];
 
-let state = null;
-function fresh(){
-  return { history:[], eventFired:false, busy:false, helps:[], hyp:"No evidence yet.", bracket:null, log:[] };
-}
+let scene=0, history=[], helps=[], hyp="No evidence yet.", coping=null, bracket=null, log=[], busy=false, done=false;
 
-/* ---------- LLM plumbing ---------- */
+/* ---------------- model plumbing (via your Netlify proxy) ---------------- */
 async function claude(system, messages, wantJson){
   const res = await fetch("/.netlify/functions/chat",{
     method:"POST", headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({ model:MODEL, max_tokens:1000, system, messages })
+    body:JSON.stringify({ max_tokens:1000, system, messages })
   });
-  if(!res.ok) throw new Error("API "+res.status);
+  if(!res.ok) throw new Error("proxy "+res.status);
   const data = await res.json();
   let text = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim();
-  if(wantJson){
-    text = text.replace(/```json/gi,"").replace(/```/g,"").trim();
-    return JSON.parse(text);
-  }
+  if(wantJson){ text = text.replace(/```json/gi,"").replace(/```/g,"").trim(); return JSON.parse(text); }
   return text;
 }
 
-/* ---------- the two streams ---------- */
-// STREAM 1 — the clerk. Sees the dialogue only. Never sees the voice message or the profile.
-function clerkSystem(){
-  return `You are Dave, a ticket clerk at a British railway station. You want to serve each passenger
-correctly and send them on their way — pleasant, brisk, ordinary. Reply as Dave only, one or two short
-spoken sentences.
-
-What you know:
-- Next direct Brighton train: 16:50, arrives 17:35, platform 4.
-- A return to Brighton is £24.
-- The 16:35 to Brighton was cancelled.
-- If they can't take the 16:50: the 17:10 to Gatwick then change there reaches Brighton about 18:10;
-  and a later direct, the 17:40, arrives 18:25.
-${state.eventFired ? "- UPDATE: the 17:10 Gatwick service is now delayed to 17:30, so that route is tight." : ""}
-${state.eventFired ? "It is a busy afternoon with changes; give full options and expect the passenger to keep up — still friendly, just less hand-holding." : "It is a normal, quiet afternoon."}
-
-You do NOT know anything about the passenger's private messages, or why or by when they are travelling,
-unless they tell you themselves. Ask only what you actually need to sell the ticket. If the passenger
-doesn't follow you, do what a real clerk does — say it again more simply, or point them to the board —
-but never explain English words or comment on how they speak. Don't teach, quiz, or evaluate — just do your job.`;
-}
-function clerkMessages(){
-  // only learner<->clerk turns, alternating; learner speaks first
-  const m=[];
-  for(const t of state.history){
-    if(t.who==="learner") m.push({role:"user",content:t.text});
-    else if(t.who==="clerk") m.push({role:"assistant",content:t.text});
-  }
-  return m;
+/* STREAM 1 — the NPC of the current scene. Sees only this scene's dialogue. */
+function sceneMessages(){
+  const sp = SCENES[scene].speaker;
+  const turns = history
+    .filter(t=>t.scene===scene && (t.who==="learner"||t.who===sp))
+    .map(t=>({role:t.who==="learner"?"user":"assistant", content:t.text}));
+  while(turns.length && turns[0].role!=="user") turns.shift();  // must start on the learner
+  return turns;
 }
 
-// STREAM 2 — profiler + mediation. Reads the transcript, never speaks to the learner as the clerk.
+/* STREAM 2 — the profiler. Reads the whole journey; told the current scene's demand. */
 function profilerSystem(){
-  return `You silently observe a learner of English handling a real situation — buying a ticket from a
-railway clerk. You never speak to the learner. Judging from the learner's language AND from whether the
-situation is actually moving forward, return one JSON object and nothing else:
+  const s=SCENES[scene];
+  return `You silently observe a learner of English on a journey through several real situations (a taxi, a ticket
+window, a station platform during disruption, and small talk with a passenger). You never speak to the learner. You
+are building ONE running profile of their working level across the whole journey.
 
-"demand_level": "A2" | "B1" | "B2" — the demand of the exchange right now.
-"struggled": true ONLY if the learner is genuinely stuck AND the clerk's latest reply has not already
-  sorted it — they can't get their meaning across after trying, they go quiet or give up, or they're lost
-  about what to do next. A normal question like "what is platform?" that the clerk answers is NOT a
-  struggle — it is just conversation. Ignore minor slips.
-"help_offer": only when struggled is true. A short in-world line (max 12 words) from a passing traveller
-  who helps by pointing at something real in the situation — the board, the right window, the queue — or a
-  warm human nudge to keep going. NEVER a definition, translation, or explanation of what a word means;
-  NEVER teaching; never tell them to leave or follow you. If the only trouble is a word the clerk can
-  clarify, return null and struggled false.
-"hypothesis": one short phrase — your current estimate of the learner's working level and why.
-"bracket": "gathering" | "emerging" | "stable". Only reach "stable" once you have seen the learner across
-  more than one demand level.
-"reason": one short sentence of evidence, for a researcher log.
+Current scene: ${s.title}. Demand level: ${s.demand}. Interaction shape: ${s.shape}. What "done" means here: ${s.complete_when}.
 
+This scene is a "${s.shape}" interaction, and completion depends on that shape, NOT on a checklist of filled slots:
+ - transaction: done when the deal is closed (${s.complete_when}).
+ - problem: done when a plan is settled or the passenger explicitly gives up on it — never merely because they answered a question.
+ - social: there is no task; done only when the chat reaches a natural lull. Do not treat a friendly exchange as an unfinished transaction.
+
+From the learner's latest turn, and everything so far, return one JSON object and nothing else:
+"coping": "comfortable" | "stretched" | "struggling" — how the learner is managing at THIS scene's demand (${s.demand}).
+"scaffold_needed": true if the interlocutor had to actively help the learner produce or be understood this turn —
+  recasting, supplying a word, repairing a breakdown. false if the learner managed on their own (an ordinary clarifying
+  question the learner handles is false). Judge the LEARNER, not the speech recogniser; ignore garbled input that looks
+  like a mishearing.
+"scene_goal_met": true only if this "${s.shape}" interaction is complete in the sense above (${s.complete_when}).
+"hypothesis": one short can-do phrase — what the learner can do and where they fray. Build it across scenes; never reset.
+"bracket": "gathering" | "emerging" | "stable". Only "stable" once you have seen the learner across at least two
+  different scene demands and know roughly where they cope and where they strain.
+"reason": one short sentence of evidence for the log.
 Return JSON only.`;
 }
-function transcript(){
-  return state.history.map(t=>{
-    const who = t.who==="learner"?"LEARNER":t.who==="clerk"?"CLERK":t.who==="traveller"?"TRAVELLER":"ANNOUNCEMENT";
-    return who+": "+t.text;
-  }).join("\n");
-}
 
-/* ---------- turn handling ---------- */
+/* ---------------- turn handling ---------------- */
 async function learnerSays(text){
-  if(state.busy) return;
-  state.history.push({who:"learner",text});
-  render(); setBusy(true); npcThinking(true);
-
+  if(busy||done) return;
+  history.push({scene, who:"learner", text});
+  render(); setBusy(true); npcState(true);
   try{
-    // STREAM 1 first: let the clerk answer in role.
-    const reply = await claude(clerkSystem(), clerkMessages(), false);
-    npcThinking(false);
-    state.history.push({who:"clerk",text:reply});
-    render();
-    speak(reply,'clerk');
+    const reply = await claude(SCENES[scene].system(), sceneMessages(), false);
+    npcState(false);
+    history.push({scene, who:SCENES[scene].speaker, text:reply});
+    render(); speak(reply, SCENES[scene].speaker);
 
-    // STREAM 2: the profiler now judges the exchange INCLUDING how the clerk handled it,
-    // so it won't drop a stranger on top of something the clerk already sorted.
     const prof = await claude(profilerSystem(), [{role:"user",content:
-      "Transcript so far (the clerk's latest reply is included):\n"+transcript()+
-      "\n\nAssess the latest LEARNER turn, taking into account how the clerk just handled it."}], true);
-
+      "Journey transcript so far:\n"+transcript()+"\n\nAssess the latest LEARNER turn against this scene's demand."}], true);
     applyProfile(prof);
-    if(prof && prof.struggled && prof.help_offer){
-      state.history.push({who:"traveller",text:prof.help_offer});
-      state.helps.push({demand: prof.demand_level||"?", turn: state.history.length});
-      speak(prof.help_offer,'traveller');
-    }
+    if(prof && prof.scaffold_needed) helps.push({demand:SCENES[scene].demand});
+    renderResearcher();
+    if(prof && prof.scene_goal_met) setTimeout(advanceScene, 700);
   }catch(e){
-    npcThinking(false);
-    state.history.push({who:"system",text:"— the line dropped (the model call failed). Try again, or run this inside the Claude artifact view where the calls are live. ["+e.message+"]"});
+    npcState(false);
+    history.push({scene, who:"narr", text:"(the line dropped — model call failed: "+e.message+")"});
   }
   setBusy(false); render();
 }
 
 function applyProfile(p){
   if(!p) return;
-  if(p.hypothesis) state.hyp = p.hypothesis;
-  if(p.bracket) state.bracket = p.bracket;
-  const stamp = new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"});
-  state.log.unshift({t:stamp, demand:p.demand_level||"?", note:p.reason||"(no note)", helped: !!(p.struggled&&p.help_offer)});
-  renderResearcher();
+  if(p.hypothesis) hyp=p.hypothesis;
+  if(p.bracket) bracket=p.bracket;
+  if(p.coping) coping=p.coping;
+  const stamp=new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"});
+  log.unshift({t:stamp, scene:SCENES[scene].leg, demand:SCENES[scene].demand, note:p.reason||"(no note)", scaffold:!!p.scaffold_needed});
 }
 
-/* ---------- world event ---------- */
-function fireEvent(){
-  if(state.eventFired) return;
-  state.eventFired = true;
-  state.history.push({who:"system",text:"TANNOY: \u201CAttention please. The 17:10 service to Gatwick Airport is delayed, and will now depart at 17:30.\u201D"});
-  drawBoard();
-  document.getElementById("eventBtn").disabled = true;
-  render();
-  speak("Attention please. The 17:10 service to Gatwick Airport is delayed, and will now depart at 17:30.",'tannoy');
+function enterScene(){
+  const s=SCENES[scene];
+  (s.opening||[]).forEach(o=>{
+    history.push({scene, who:o.who, text:o.text});
+    if(o.who!=="narr") speak(o.text, o.who);
+  });
+  if(s.id==="platform"){ drawBoard(true); }
+  render(); renderJourney();
 }
-
-/* ---------- rendering ---------- */
-function drawBoard(){
-  const rows = state.eventFired ? BOARD_AFTER : BOARD_BEFORE;
-  document.getElementById("boardBody").innerHTML = rows.map(r=>
-    `<tr><td class="mono">${r[0]}</td><td>${r[1]}</td><td class="mono">${r[2]}</td><td class="${r[4]}">${r[3]}</td></tr>`
-  ).join("");
-}
-function npcThinking(on){
-  document.getElementById("npcState").textContent = on ? "Dave is replying…" : (state.history.some(t=>t.who==="clerk")?"in conversation":"clerk waiting");
-}
-function render(){
-  const stage = document.getElementById("stage");
-  if(state.history.length===0){
-    stage.innerHTML = `<div class="waiting" id="opener">Dave is behind the counter, sorting tickets. He hasn't noticed you yet — walk up and say something to begin.</div>`;
+function advanceScene(){
+  if(scene>=SCENES.length-1){
+    done=true;
+    history.push({scene, who:"narr", text:"— your train's called and you head for it. The journey carries on from here: boarding, the ride, arriving, the thing at six — more situations would slot straight onto the same machine. (The profile on the right was built across the whole trip so far.)"});
+    renderJourney(); render(); setBusy(true);
+    document.getElementById("npcState").textContent="the journey continues…";
     return;
   }
-  stage.innerHTML = state.history.map(t=>{
-    if(t.who==="system") return `<div class="sys">${t.text}</div>`;
-    const cls = t.who==="learner"?"learner-turn":t.who==="traveller"?"traveller-turn":"clerk-turn";
-    const name = t.who==="learner"?"You":t.who==="traveller"?"A passing traveller":"Dave · clerk";
-    return `<div class="turn ${cls}"><div><div class="name">${name}</div><div class="bubble">${escapeHtml(t.text)}</div></div></div>`;
-  }).join("");
-  stage.scrollTop = stage.scrollHeight;
+  scene++; enterScene();
+}
+
+/* ---------------- rendering ---------------- */
+function transcript(){
+  return history.map(t=>{
+    const tag = t.who==="learner"?"LEARNER":t.who==="narr"?"(scene)":t.who==="tannoy"?"ANNOUNCEMENT":SCENES.find(s=>s.speaker===t.who)?.name.toUpperCase()||t.who.toUpperCase();
+    return tag+": "+t.text;
+  }).join("\n");
+}
+function drawBoard(disrupt){
+  const rows = disrupt ? BOARD_DISRUPT : BOARD_BEFORE;
+  document.getElementById("boardBody").innerHTML = rows.map(r=>
+    `<tr><td class="mono">${r[0]}</td><td>${r[1]}</td><td class="mono">${r[2]}</td><td class="${r[4]}">${r[3]}</td></tr>`).join("");
+}
+function npcState(thinking){
+  document.getElementById("npcState").textContent = thinking ? "…thinking" : (done?"journey complete":SCENES[scene].name.replace(/·.*/,"").trim()+" is here");
+  document.getElementById("sceneHead").firstChild.textContent = SCENES[scene].title+" ";
+}
+function speakerName(who){ const s=SCENES.find(x=>x.speaker===who); return s?s.name:who; }
+function render(){
+  const stage=document.getElementById("stage");
+  document.getElementById("sceneHead").firstChild.textContent = SCENES[scene].title+" ";
+  if(history.length===0){ stage.innerHTML=`<div class="waiting">Your journey is about to begin…</div>`; return; }
+  let html="", lastScene=-1;
+  for(const t of history){
+    if(t.scene!==lastScene && t.who==="narr"){ /* scene narration acts as divider */ }
+    lastScene=t.scene;
+    if(t.who==="narr"){ html+=`<div class="narr">${escapeHtml(t.text)}</div>`; }
+    else if(t.who==="tannoy"){ html+=`<div class="sys">${escapeHtml(t.text.replace(/^TANNOY:\s*/,""))}</div>`; }
+    else if(t.who==="learner"){ html+=`<div class="turn learner-turn"><div><div class="name">You</div><div class="bubble">${escapeHtml(t.text)}</div></div></div>`; }
+    else { html+=`<div class="turn npc-turn"><div><div class="name">${escapeHtml(speakerName(t.who))}</div><div class="bubble">${escapeHtml(t.text)}</div></div></div>`; }
+  }
+  stage.innerHTML=html; stage.scrollTop=stage.scrollHeight;
+}
+function renderJourney(){
+  const legs = SCENES.map((s,i)=>{
+    const cls = i<scene||done&&i<=scene ? "leg done" : i===scene ? "leg now" : "leg";
+    return `<div class="${cls}">${s.leg}</div>`;
+  });
+  legs.push(`<div class="leg" style="opacity:.5">…continues</div>`);
+  document.getElementById("journey").innerHTML = legs.join("");
 }
 function renderResearcher(){
-  document.getElementById("hyp").textContent = state.hyp;
-  document.querySelectorAll("#brk .pip").forEach(p=>p.classList.toggle("on", p.dataset.b===state.bracket));
-  document.getElementById("helpNum").textContent = state.helps.length;
-  const by = {};
-  state.helps.forEach(h=> by[h.demand]=(by[h.demand]||0)+1 );
-  const keys = Object.keys(by).sort();
-  document.getElementById("helpBy").innerHTML = keys.length
-    ? keys.map(k=>`<b>${by[k]}</b> at ${k}`).join(" &middot; ")
-    : "none yet";
-  document.getElementById("log").innerHTML = state.log.length
-    ? state.log.map(l=>`<div><span class="d">${l.t}</span>[${l.demand}] ${escapeHtml(l.note)} ${l.helped?'<span style="color:#ffb000">·help offered</span>':''}</div>`).join("")
+  document.getElementById("hyp").textContent=hyp;
+  const cw=document.getElementById("copingWrap");
+  if(coping){ cw.style.display=""; const c=document.getElementById("coping"); c.textContent=coping; c.className="cp "+coping; }
+  document.querySelectorAll("#brk .pip").forEach(p=>p.classList.toggle("on", p.dataset.b===bracket));
+  document.getElementById("helpNum").textContent=helps.length;
+  const by={}; helps.forEach(h=>by[h.demand]=(by[h.demand]||0)+1);
+  const keys=Object.keys(by).sort();
+  document.getElementById("helpBy").innerHTML = keys.length ? keys.map(k=>`<b>${by[k]}</b> at ${k}`).join(" &middot; ") : "none yet";
+  document.getElementById("log").innerHTML = log.length
+    ? log.map(l=>`<div><span class="d">${l.t}</span>[${l.demand} · ${escapeHtml(l.scene)}] ${escapeHtml(l.note)} ${l.scaffold?'<span style="color:#ffb000">·scaffolded</span>':''}</div>`).join("")
     : `<div style="color:#5f6b78">Waiting for the first turn…</div>`;
 }
 function escapeHtml(s){return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]))}
-function setBusy(b){
-  state.busy=b;
-  document.getElementById("sendBtn").disabled=b;
-  document.getElementById("say").disabled=b;
-}
+function setBusy(b){ busy=b; document.getElementById("sendBtn").disabled=b; document.getElementById("say").disabled=b; }
 
-/* ---------- wiring ---------- */
-function send(){
-  const inp=document.getElementById("say");
-  const v=inp.value.trim(); if(!v||state.busy) return;
-  inp.value=""; learnerSays(v);
-}
-function reset(){
-  state = fresh();
-  if(window.speechSynthesis) window.speechSynthesis.cancel();
-  if(typeof setListen==="function") setListen(false);
-  if(typeof micHint==="function") micHint("");
-  document.getElementById("eventBtn").disabled=false;
-  document.getElementById("vm").classList.remove("open");
-  document.getElementById("vmPlay").innerHTML="&#9654;&nbsp; Play (0:07)";
-  drawBoard(); render(); renderResearcher(); npcThinking(false);
-}
-document.getElementById("sendBtn").onclick=send;
-document.getElementById("say").addEventListener("keydown",e=>{if(e.key==="Enter")send();});
-document.getElementById("eventBtn").onclick=fireEvent;
-document.getElementById("resetBtn").onclick=reset;
-document.getElementById("vmPlay").onclick=function(){
-  const vm=document.getElementById("vm"); vm.classList.toggle("open");
-  this.innerHTML = vm.classList.contains("open") ? "&#10073;&#10073;&nbsp; Showing message" : "&#9654;&nbsp; Play (0:07)";
-};
-const rsw=document.getElementById("rswitch");
-rsw.onclick=function(){
-  const on=!this.classList.contains("on");
-  this.classList.toggle("on",on); this.setAttribute("aria-checked",on);
-  document.getElementById("researcher").style.display=on?"":"none";
-  document.getElementById("rstate").textContent=on?"on":"off";
-};
-document.getElementById("envNote").innerHTML =
-  "Two model calls fire on every learner turn: one <b>is</b> the clerk (sees the dialogue only), one is the "+
-  "profiler (reads the transcript, decides if a passing traveller should offer help, and updates the read). "+
-  "The clerk is never given the voice message or the profile. Live calls run inside the Claude artifact view.";
-
-/* ---------- speaking layer (rough — browser Web Speech API, client-side, no key) ---------- */
+/* ---------------- speech (rough browser Web Speech API) ---------------- */
 let speechOn=false, recog=null, listening=false;
-const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-const synth = window.speechSynthesis || null;
+const SR = window.SpeechRecognition||window.webkitSpeechRecognition;
+const synth = window.speechSynthesis||null;
 let voices=[];
-function loadVoices(){ if(synth) voices = synth.getVoices()||[]; }
-if(synth){ loadVoices(); synth.onvoiceschanged = loadVoices; }
-
+function loadVoices(){ if(synth) voices=synth.getVoices()||[]; }
+if(synth){ loadVoices(); synth.onvoiceschanged=loadVoices; }
 function pickVoice(kind){
-  const gb = voices.filter(v=>/en[-_]GB/i.test(v.lang));
-  const pool = gb.length ? gb : voices.filter(v=>/^en/i.test(v.lang));
+  const gb=voices.filter(v=>/en[-_]GB/i.test(v.lang));
+  const pool=gb.length?gb:voices.filter(v=>/^en/i.test(v.lang));
   if(!pool.length) return null;
-  const idx = {clerk:0, traveller:1, tannoy:0, linh:2}[kind] || 0;   // sound distinct if voices exist
-  return pool[Math.min(idx, pool.length-1)];
+  const idx={driver:0,clerk:1,guard:2,passenger:3,tannoy:0,linh:3}[kind]||0;
+  return pool[Math.min(idx,pool.length-1)];
 }
 function speak(text,kind){
-  if(!speechOn || !synth || !text) return;
+  if(!speechOn||!synth||!text) return;
   try{
-    if(recog && listening) recog.stop();            // arbitration: never listen over speech
+    if(recog&&listening) recog.stop();
     synth.cancel();
-    const u = new SpeechSynthesisUtterance(String(text).replace(/[\u201C\u201D]/g,'"').replace(/TANNOY:\s*/,''));
-    const v = pickVoice(kind); if(v){ u.voice=v; u.lang=v.lang; } else u.lang='en-GB';
-    u.rate = kind==='tannoy'?0.96:1.02;
-    synth.speak(u);
+    const u=new SpeechSynthesisUtterance(String(text).replace(/[\u201C\u201D]/g,'"').replace(/^TANNOY:\s*/,""));
+    const v=pickVoice(kind); if(v){u.voice=v;u.lang=v.lang;} else u.lang="en-GB";
+    u.rate=kind==="tannoy"?0.96:1.02; synth.speak(u);
   }catch(e){}
 }
 function setListen(b){ listening=b; const m=document.getElementById("micBtn"); if(m) m.classList.toggle("live",b); }
 function micHint(t){ const h=document.getElementById("micHint"); if(h) h.textContent=t||""; }
 function startListen(){
-  if(!speechOn || !SR) return;
-  if(synth) synth.cancel();                          // arbitration: stop speech before the mic opens
+  if(!speechOn||!SR) return;
+  if(synth) synth.cancel();
   if(!recog){
-    recog = new SR();
-    recog.lang='en-GB'; recog.interimResults=false; recog.maxAlternatives=1; recog.continuous=false;
-    recog.onresult = e=>{ document.getElementById("say").value = e.results[0][0].transcript; setListen(false); micHint(""); send(); };
-    recog.onerror  = e=>{
-      setListen(false);
-      const map = {
-        "not-allowed":"mic blocked by the browser/frame — run it hosted (see note below)",
-        "service-not-allowed":"speech service blocked in this frame — run it hosted (see note)",
-        "network":"speech service unreachable from this frame — run it hosted (see note)",
-        "audio-capture":"no microphone detected",
-        "no-speech":"didn’t hear anything — tap and speak",
-        "aborted":"stopped"
-      };
-      micHint(map[e.error] || ("mic error: "+e.error));
-      console.warn("SpeechRecognition error:", e.error);
-    };
-    recog.onend    = ()=>{ setListen(false); };
+    recog=new SR(); recog.lang="en-GB"; recog.interimResults=false; recog.maxAlternatives=1; recog.continuous=false;
+    recog.onresult=e=>{ document.getElementById("say").value=e.results[0][0].transcript; setListen(false); micHint(""); send(); };
+    recog.onerror=e=>{ setListen(false); const m={"not-allowed":"mic blocked by the browser","service-not-allowed":"speech service blocked here","network":"speech service unreachable","audio-capture":"no microphone found","no-speech":"didn’t hear anything — tap and speak"}; micHint(m[e.error]||("mic error: "+e.error)); };
+    recog.onend=()=>setListen(false);
   }
   try{ recog.start(); setListen(true); micHint("listening…"); }
-  catch(err){ setListen(false); micHint("couldn’t start the mic: "+(err.name||err.message)+" — likely the sandbox"); }
+  catch(err){ setListen(false); micHint("couldn’t start the mic: "+(err.name||err.message)); }
 }
-document.getElementById("sswitch").onclick=function(){
-  if(!SR && !synth){ document.getElementById("sstate").textContent="not supported in this browser"; return; }
-  speechOn = !this.classList.contains("on");
-  this.classList.toggle("on",speechOn); this.setAttribute("aria-checked",speechOn);
-  document.getElementById("sstate").textContent = speechOn?"on":"off";
-  document.getElementById("micBtn").style.display = (speechOn && SR) ? "" : "none";
-  micHint(speechOn && !SR ? "voice replies only — mic needs Chrome/Edge" : "");
-  if(!speechOn && synth) synth.cancel();
+
+/* ---------------- wiring ---------------- */
+function send(){ const inp=document.getElementById("say"); const v=inp.value.trim(); if(!v||busy||done) return; inp.value=""; learnerSays(v); }
+function reset(){
+  scene=0; history=[]; helps=[]; hyp="No evidence yet."; coping=null; bracket=null; log=[]; done=false;
+  if(synth) synth.cancel(); setListen(false); micHint("");
+  document.getElementById("vm").classList.remove("open");
+  document.getElementById("vmPlay").innerHTML="&#9654;&nbsp; Play (0:07)";
+  document.getElementById("coping").className="cp"; document.getElementById("copingWrap").style.display="none";
+  document.getElementById("npcState").textContent="";
+  drawBoard(false); enterScene(); renderResearcher();
+}
+document.getElementById("sendBtn").onclick=send;
+document.getElementById("say").addEventListener("keydown",e=>{if(e.key==="Enter")send();});
+document.getElementById("resetBtn").onclick=reset;
+document.getElementById("vmPlay").onclick=function(){
+  const vm=document.getElementById("vm"); vm.classList.toggle("open");
+  this.innerHTML=vm.classList.contains("open")?"&#10073;&#10073;&nbsp; Showing message":"&#9654;&nbsp; Play (0:07)";
+  if(speechOn&&vm.classList.contains("open")) speak("Hi, it's Linh! Don't forget the thing starts at six on the dot, so you have to be in Brighton before six. Don't be late, see you there!","linh");
 };
-document.getElementById("micBtn").onclick=()=>{ (listening && recog) ? recog.stop() : startListen(); };
-// speak the friend's message aloud too, when speech is on (revisitable audio, literally)
-document.getElementById("vmPlay").addEventListener("click",()=>{
-  if(speechOn && document.getElementById("vm").classList.contains("open")){
-    speak("Hi, it's Linh! Don't forget the thing starts at six on the dot, so you have to be in Brighton before six. Don't be late, see you there!","linh");
-  }
-});
+document.getElementById("rswitch").onclick=function(){
+  const on=!this.classList.contains("on"); this.classList.toggle("on",on); this.setAttribute("aria-checked",on);
+  document.getElementById("researcher").style.display=on?"":"none"; document.getElementById("rstate").textContent=on?"on":"off";
+};
+document.getElementById("sswitch").onclick=function(){
+  if(!SR&&!synth){ document.getElementById("sstate").textContent="not supported here"; return; }
+  speechOn=!this.classList.contains("on"); this.classList.toggle("on",speechOn); this.setAttribute("aria-checked",speechOn);
+  document.getElementById("sstate").textContent=speechOn?"on":"off";
+  document.getElementById("micBtn").style.display=(speechOn&&SR)?"":"none";
+  micHint(speechOn&&!SR?"voice replies only — mic needs Chrome/Edge":"");
+  if(!speechOn&&synth) synth.cancel();
+};
+document.getElementById("micBtn").onclick=()=>{ (listening&&recog)?recog.stop():startListen(); };
+document.getElementById("envNote").innerHTML =
+  "Four scenes, four personas, one running profile. Each NPC sees only its own scene and scaffolds in role — there's no "+
+  "outside helper. The profiler reads the whole journey and sets demand by the scene you're in, so the level tags stop "+
+  "chasing each sentence. Model calls go through your Netlify function.";
 
 reset();
 </script>
