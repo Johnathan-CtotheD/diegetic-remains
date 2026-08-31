@@ -225,13 +225,14 @@ comment on how they speak, teach or quiz. You don't know why or by when they're 
              {who:"tannoy",text:"TANNOY: \u201CPlatform alteration: the 16:50 service to Brighton will now depart from platform 6. Platform 6 for the 16:50 Brighton.\u201D"},
              {who:"narr",text:"A passenger with a heavy bag turns to you, looking a little lost."},
              {who:"asker",text:"Sorry to bother you — you don't know which platform the Brighton train goes from, do you?"}],
-    system:()=>`You are a fellow passenger on the station concourse, a bit flustered and running late, who has just
-asked this person whether they know which platform the Brighton train leaves from. Crucially, YOU do not know the
-platform — you are relying on them to tell you (the tannoy just said platform 6, but assume you missed it). Reply
-ONLY as this passenger, in one short natural line. React to whatever they tell you: grateful and relieved if they
-give you a platform, and if they seem unsure, wonder aloud where you might check. If they struggle for words, be a
-patient, friendly listener and offer a word only if they're truly stuck — never teach or correct them. Once you know
-the platform, thank them warmly and head off.`
+    system:()=>`You are a fellow passenger on the station concourse, a bit flustered and running late — heavy bag, not
+great eyesight for the boards — who has just asked this person whether they know which platform the Brighton train
+leaves from. You are genuinely unsure of the platform yourself and are hoping they can help. Be natural: you can wonder
+aloud the way a real person does ("was it five or six? I can never read those boards"), but don't confidently state the
+platform as if you know it — you're relying on them to confirm it. Reply ONLY as this passenger, one short natural line
+at a time. Once they give you a platform, react warmly and you may ask one brief follow-up (is that the fast one? are
+you headed that way too?) before thanking them and heading off. If they struggle for words, be a patient listener and
+offer a single word only if they're truly stuck — never teach or correct them.`
   },
   {
     id:"train", leg:"On the train", title:"On the train", speaker:"seatmate", name:"Your seatmate", demand:"B1",
@@ -239,12 +240,20 @@ the platform, thank them warmly and head off.`
     complete_when:"never — this is the open end of the journey; the conversation simply continues",
     opening:[{who:"narr",text:"You make it aboard with moments to spare and drop into a seat. As the train pulls away, the person beside you glances up from their book."},
              {who:"seatmate",text:"Made it, then — cutting it fine! Off to Brighton yourself?"}],
-    system:()=>`You are a friendly, talkative fellow traveller sharing a train seat, settled in for the journey and
-happy to chat about anything at all — the trip, the weather, where they're headed, what they do, plans for the
-evening, whatever comes up. You just said "Made it, then — cutting it fine! Off to Brighton yourself?" Reply ONLY as
-this seatmate, one or two natural lines. Keep it open and easy: follow their lead, ask the odd question back, share a
-little about yourself, let the conversation wander. There is nothing to complete and no hurry — just good company for
-the ride. If they reach for a word, help the way a friendly seatmate would, without ever turning it into a lesson.`
+    system:()=>{
+      const n = (typeof turnsInTrain==="function") ? turnsInTrain() : 0;
+      const close = n>=5 ? `
+
+You have now been chatting for a good while. On THIS turn you should wind the conversation down YOURSELF — do not ask another question. With a light touch, acknowledge you've been chattering on; if they mentioned somewhere to be or something to prepare for, warmly say you'll let them get on with it; otherwise just wish them a good rest of their journey — then sign off. Something like: "Anyway, listen to me going on — I'll let you get on. Safe travels."` : "";
+      return `You are a friendly fellow traveller sharing a train seat, happy to make easy conversation — the journey,
+the weather, where they're off to. You just said "Made it, then — cutting it fine! Off to Brighton yourself?" Reply
+ONLY as this seatmate, and keep every turn SHORT — usually one sentence, two at the very most. At most ONE question per
+turn, and often none: sometimes just react warmly and leave the floor open. Never stack a reaction, a fact about
+yourself, and a question into one turn — do ONE thing and hand it back. Keep it warm but NOT nosy: react and comment
+more than you probe, and don't interrogate them about their job or their life. The learner should be doing most of the
+talking — draw them out rather than out-talking them. If they reach for a word, offer it without ever turning it into a
+lesson.${close}`;
+    }
   }
 ];
 
@@ -313,6 +322,7 @@ Return JSON only.`;
 }
 
 /* ---------------- turn handling ---------------- */
+function turnsInTrain(){ return history.filter(t=>t.who==="learner" && SCENES[t.scene] && SCENES[t.scene].id==="train").length; }
 async function learnerSays(text){
   if(busy||done) return;
   history.push({scene, who:"learner", text});
@@ -347,7 +357,13 @@ async function learnerSays(text){
     await new Promise(r=>setTimeout(r, 900));
     advanceScene();
   }
-  setBusy(false); render();
+  // the seatmate winds the chat up itself after a good stretch — the bot ends the journey, not the user
+  if(SCENES[scene].id==="train" && turnsInTrain()>=5){
+    done=true;
+    history.push({scene, who:"narr", text:"You settle back with your notes as the fields slide past. — journey complete; the profile on the right was built across the whole trip."});
+    renderJourney();
+  }
+  setBusy(done); render();
 }
 
 function applyProfile(p){
