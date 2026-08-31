@@ -220,7 +220,7 @@ comment on how they speak, teach or quiz. You don't know why or by when they're 
   {
     id:"platform_ask", leg:"A passenger asks you", title:"Finding the platform", speaker:"asker", name:"A passenger", demand:"B1",
     shape:"info-giving", goal:"tell the passenger which platform the Brighton train leaves from",
-    complete_when:"the learner has told the passenger the platform, or has clearly conveyed that they don't know",
+    complete_when:"the passenger has the platform, any brief follow-up has been answered, and they are thanking you or heading off — NOT the instant the platform is first named",
     opening:[{who:"narr",text:"Ticket in hand, you step out onto the concourse."},
              {who:"tannoy",text:"TANNOY: \u201CPlatform alteration: the 16:50 service to Brighton will now depart from platform 6. Platform 6 for the 16:50 Brighton.\u201D"},
              {who:"narr",text:"A passenger with a heavy bag turns to you, looking a little lost."},
@@ -304,7 +304,7 @@ Current scene: ${s.title}. Demand level: ${s.demand}. Interaction shape: ${s.sha
 
 This scene is a "${s.shape}" interaction, and completion depends on that shape, NOT on a checklist of filled slots:
  - transaction: done when the deal is closed (${s.complete_when}).
- - info-giving: the learner HOLDS the information the other person needs (here, the platform). Judge whether they can PRODUCE it. Done once they've told the passenger the platform, or clearly said they don't know — never merely because a question was asked.
+ - info-giving: the learner HOLDS the information the other person needs (here, the platform). Judge whether they can PRODUCE it. Do NOT mark done the instant the platform is first named — let the brief exchange breathe (the passenger may ask a quick follow-up). Done only once the passenger has what they need and the little exchange is closing: they've thanked the learner or are heading off.
  - social: there is NO task and NO ending — this is the open end of the journey. Always return scene_goal_met false; never try to close it.
 
 From the learner's latest turn, and everything so far, return one JSON object and nothing else:
@@ -479,7 +479,7 @@ function startListen(){
   if(synth) synth.cancel();
   if(!recog){
     recog=new SR(); recog.lang="en-GB"; recog.interimResults=false; recog.maxAlternatives=1; recog.continuous=false;
-    recog.onresult=e=>{ document.getElementById("say").value=e.results[0][0].transcript; setListen(false); micHint(""); send(); };
+    recog.onresult=e=>{ document.getElementById("say").value=e.results[0][0].transcript; setListen(false); micHint("check what it heard, then press Say"); const inp=document.getElementById("say"); inp.focus(); inp.selectionStart=inp.value.length; };
     recog.onerror=e=>{ setListen(false); const m={"not-allowed":"mic blocked by the browser","service-not-allowed":"speech service blocked here","network":"speech service unreachable","audio-capture":"no microphone found","no-speech":"didn’t hear anything — tap and speak"}; micHint(m[e.error]||("mic error: "+e.error)); };
     recog.onend=()=>setListen(false);
   }
