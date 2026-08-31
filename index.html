@@ -69,6 +69,9 @@
   .learner-turn .bubble{background:var(--ink);color:#fff;border-bottom-right-radius:3px}
   .name{font-size:11px;color:var(--ink-soft);margin:0 6px 2px;text-transform:uppercase;letter-spacing:.07em}
   .narr{margin:14px 8px;text-align:center;font-size:12.5px;color:var(--ink-soft);font-style:italic}
+  .block{display:flex;align-items:center;gap:9px;margin:20px 2px 6px;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink)}
+  .block::after{content:"";flex:1;height:2px;background:var(--ink);opacity:.12}
+  .block-n{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--ink);color:#fff;font-size:12px;letter-spacing:0}
   .sys{margin:12px 6px;text-align:center;font-size:12px;color:var(--br-red);border-top:1px dashed #e2b7bd;border-bottom:1px dashed #e2b7bd;padding:7px 4px;letter-spacing:.03em}
   .waiting{color:var(--ink-soft);font-size:13px;padding:8px 6px;font-style:italic}
 
@@ -194,14 +197,14 @@ const SCENES = [
     id:"taxi", leg:"Taxi", title:"In the taxi", speaker:"driver", name:"Cabbie", demand:"A2",
     shape:"transaction", goal:"pay the fare and get out at the station",
     complete_when:"the fare has been paid and the passenger is heading off",
-    opening:[{who:"narr",text:"Your taxi pulls up outside the station."},
-             {who:"driver",text:"Here we are — that'll be eighteen fifty."}],
-    system:()=>`You are a friendly London cabbie who has just pulled up outside the railway station and said
-"Here we are — that'll be eighteen fifty." You want your fare and to be on your way. Reply as the cabbie only,
-one or two short spoken sentences. If the passenger fumbles the words, do what a cabbie does — say it again
-simply, or echo back what they meant so they can use it — but never explain English or comment on how they talk,
-and don't teach or quiz. Once they've paid (cash, card, or "keep the change"), wish them well. You don't know
-where they're going or why unless they say.`
+    opening:[{who:"narr",text:"A grey afternoon. The taxi slows to a stop outside the station, meter still ticking."},
+             {who:"driver",text:"Righto, here we are — that's eighteen fifty, please."}],
+    system:()=>`You are a warm, chatty London cabbie dropping a passenger outside the station; you've just said the
+fare is eighteen fifty. Reply as the cabbie in ONE short, natural line — never ramble, never think out loud, never
+narrate your own change-making. You want your fare and to send them off with a friendly word. If they fumble the
+words, say it again simply or echo what they meant so they can use it — never explain English, teach, or quiz. Once
+they've paid (cash, card, or keep-the-change), wish them a good journey. You don't know where they're going unless
+they tell you.`
   },
   {
     id:"tickets", leg:"Ticket window", title:"At the ticket window", speaker:"clerk", name:"Dave · clerk", demand:"B1",
@@ -215,33 +218,33 @@ you, say it again more simply or echo the right words back so they can reuse the
 comment on how they speak, teach or quiz. You don't know why or by when they're travelling unless they tell you.`
   },
   {
-    id:"platform", leg:"Platform (disruption)", title:"On the platform", speaker:"guard", name:"Guard", demand:"B2",
-    shape:"problem", goal:"with the 16:50 cancelled, settle on a way to still reach Brighton",
-    complete_when:"the passenger has settled on a plan — chosen a specific train — or has explicitly accepted they cannot make it before six",
-    opening:[{who:"narr",text:"Ticket in hand, you reach the platform."},
-             {who:"tannoy",text:"TANNOY: \u201CAttention please. The 16:50 service to Brighton is cancelled. We apologise for the disruption.\u201D"},
-             {who:"narr",text:"A guard is standing nearby."}],
-    system:()=>`You are a calm, capable platform guard. There is disruption today and the 16:50 direct to Brighton
-has just been cancelled. Options to Brighton that you know: the 17:10 to Gatwick then change, reaching Brighton about
-18:10; a later direct at 17:40, in at 18:25; and — if they are quick — a fast 16:58 from platform 6 that gets into
-Brighton at 17:42. You want to get each passenger sorted and moving. Reply as the guard only, one or two short
-sentences. If the passenger struggles to say something, echo the right words back or offer the phrase so they can use
-it — never explain grammar, drill, or grade their English. You don't know why they are travelling or by when unless
-they tell you. Because of the cancellation, ask where they're heading and — importantly — by when they need to be
-there, so you can steer them; only the passenger knows their own deadline. If they give a time, help them weigh the
-trains against it (the fast 16:58 makes it before six; the later ones do not).`
+    id:"platform_ask", leg:"A passenger asks you", title:"Finding the platform", speaker:"asker", name:"A passenger", demand:"B1",
+    shape:"info-giving", goal:"tell the passenger which platform the Brighton train leaves from",
+    complete_when:"the learner has told the passenger the platform, or has clearly conveyed that they don't know",
+    opening:[{who:"narr",text:"Ticket in hand, you step out onto the concourse."},
+             {who:"tannoy",text:"TANNOY: \u201CPlatform alteration: the 16:50 service to Brighton will now depart from platform 6. Platform 6 for the 16:50 Brighton.\u201D"},
+             {who:"narr",text:"A passenger with a heavy bag turns to you, looking a little lost."},
+             {who:"asker",text:"Sorry to bother you — you don't know which platform the Brighton train goes from, do you?"}],
+    system:()=>`You are a fellow passenger on the station concourse, a bit flustered and running late, who has just
+asked this person whether they know which platform the Brighton train leaves from. Crucially, YOU do not know the
+platform — you are relying on them to tell you (the tannoy just said platform 6, but assume you missed it). Reply
+ONLY as this passenger, in one short natural line. React to whatever they tell you: grateful and relieved if they
+give you a platform, and if they seem unsure, wonder aloud where you might check. If they struggle for words, be a
+patient, friendly listener and offer a word only if they're truly stuck — never teach or correct them. Once you know
+the platform, thank them warmly and head off.`
   },
   {
-    id:"passenger", leg:"Fellow passenger", title:"Waiting for the train", speaker:"passenger", name:"A fellow passenger", demand:"B1",
-    shape:"social", goal:"hold a short, natural social exchange (no transaction)",
-    complete_when:"the small talk has run its course and reached a natural lull — there is nothing to complete or achieve",
-    opening:[{who:"narr",text:"You find a spot to wait. Someone waiting beside you glances over."},
-             {who:"passenger",text:"Off somewhere nice?"}],
-    system:()=>`You are a chatty fellow passenger waiting on the platform, making small talk. You just asked
-"Off somewhere nice?" Keep it light and social — one or two short sentences, real small talk, not an interview.
-React like a person: if they mention being in a hurry or the delays, sympathise and chat about it. If they reach for
-a word, help the way a friendly stranger naturally would — supply it, echo them — but don't correct or teach them like
-a lesson. You have nowhere in particular to be. After a couple of friendly exchanges, let the chat wind down naturally.`
+    id:"train", leg:"On the train", title:"On the train", speaker:"seatmate", name:"Your seatmate", demand:"B1",
+    shape:"social", goal:"open, unhurried conversation — no task, no ending",
+    complete_when:"never — this is the open end of the journey; the conversation simply continues",
+    opening:[{who:"narr",text:"You make it aboard with moments to spare and drop into a seat. As the train pulls away, the person beside you glances up from their book."},
+             {who:"seatmate",text:"Made it, then — cutting it fine! Off to Brighton yourself?"}],
+    system:()=>`You are a friendly, talkative fellow traveller sharing a train seat, settled in for the journey and
+happy to chat about anything at all — the trip, the weather, where they're headed, what they do, plans for the
+evening, whatever comes up. You just said "Made it, then — cutting it fine! Off to Brighton yourself?" Reply ONLY as
+this seatmate, one or two natural lines. Keep it open and easy: follow their lead, ask the odd question back, share a
+little about yourself, let the conversation wander. There is nothing to complete and no hurry — just good company for
+the ride. If they reach for a word, help the way a friendly seatmate would, without ever turning it into a lesson.`
   }
 ];
 
@@ -251,8 +254,7 @@ const BOARD_BEFORE = [
   ["17:10","Gatwick Airport","2","On time","stat-ok"],
 ];
 const BOARD_DISRUPT = [
-  ["16:50","Brighton","4","Cancelled","stat-canc"],
-  ["16:58","Brighton (fast)","6","On time","stat-ok"],
+  ["16:50","Brighton","6","Platform changed","stat-warn"],
   ["17:10","Gatwick Airport","2","On time","stat-ok"],
   ["17:40","Brighton","4","On time","stat-ok"],
 ];
@@ -286,15 +288,15 @@ function sceneMessages(){
 function profilerSystem(){
   const s=SCENES[scene];
   return `You silently observe a learner of English on a journey through several real situations (a taxi, a ticket
-window, a station platform during disruption, and small talk with a passenger). You never speak to the learner. You
+window, helping a stranger find their platform, and open conversation with a fellow traveller on the train). You never speak to the learner. You
 are building ONE running profile of their working level across the whole journey.
 
 Current scene: ${s.title}. Demand level: ${s.demand}. Interaction shape: ${s.shape}. What "done" means here: ${s.complete_when}.
 
 This scene is a "${s.shape}" interaction, and completion depends on that shape, NOT on a checklist of filled slots:
  - transaction: done when the deal is closed (${s.complete_when}).
- - problem: done when a plan is settled or the passenger explicitly gives up on it — never merely because they answered a question.
- - social: there is no task; done only when the chat reaches a natural lull. Do not treat a friendly exchange as an unfinished transaction.
+ - info-giving: the learner HOLDS the information the other person needs (here, the platform). Judge whether they can PRODUCE it. Done once they've told the passenger the platform, or clearly said they don't know — never merely because a question was asked.
+ - social: there is NO task and NO ending — this is the open end of the journey. Always return scene_goal_met false; never try to close it.
 
 From the learner's latest turn, and everything so far, return one JSON object and nothing else:
 "coping": "comfortable" | "stretched" | "struggling" — how the learner is managing at THIS scene's demand (${s.demand}).
@@ -315,21 +317,35 @@ async function learnerSays(text){
   if(busy||done) return;
   history.push({scene, who:"learner", text});
   render(); setBusy(true); npcState(true);
+  let reply;
   try{
-    const reply = await claude(SCENES[scene].system(), sceneMessages(), false);
-    npcState(false);
-    history.push({scene, who:SCENES[scene].speaker, text:reply});
-    render(); speak(reply, SCENES[scene].speaker);
-
-    const prof = await claude(profilerSystem(), [{role:"user",content:
-      "Journey transcript so far:\n"+transcript()+"\n\nAssess the latest LEARNER turn against this scene's demand."}], true);
-    applyProfile(prof);
-    if(prof && prof.scaffold_needed) helps.push({demand:SCENES[scene].demand});
-    renderResearcher();
-    if(prof && prof.scene_goal_met) setTimeout(advanceScene, 700);
+    reply = await claude(SCENES[scene].system(), sceneMessages(), false);
   }catch(e){
     npcState(false);
-    history.push({scene, who:"narr", text:"(the line dropped — model call failed: "+e.message+")"});
+    history.push({scene, who:"narr", text:"(the line dropped — tap Say to try again)"});
+    setBusy(false); render(); return;
+  }
+  npcState(false);
+  history.push({scene, who:SCENES[scene].speaker, text:reply});
+  render(); speak(reply, SCENES[scene].speaker);
+
+  // profiler runs in its OWN guard: a JSON hiccup must never drop the turn or bleed a scene
+  let goalMet=false;
+  try{
+    const prof = await claude(profilerSystem(), [{role:"user",content:
+      "Journey transcript so far:\n"+transcript()+"\n\nAssess the latest LEARNER turn against this scene's demand."}], true);
+    if(prof){
+      applyProfile(prof);
+      if(prof.scaffold_needed) helps.push({demand:SCENES[scene].demand});
+      renderResearcher();
+      goalMet = !!prof.scene_goal_met;
+    }
+  }catch(e){ /* profiler hiccup — skip this turn's read, carry on */ }
+
+  // hand off with input STILL LOCKED, so a fast learner can't fire a turn into the gap
+  if(goalMet && scene < SCENES.length-1){
+    await new Promise(r=>setTimeout(r, 900));
+    advanceScene();
   }
   setBusy(false); render();
 }
@@ -349,17 +365,11 @@ function enterScene(){
     history.push({scene, who:o.who, text:o.text});
     if(o.who!=="narr") speak(o.text, o.who);
   });
-  if(s.id==="platform"){ drawBoard(true); }
+  if(s.id==="platform_ask"){ drawBoard(true); }
   render(); renderJourney();
 }
 function advanceScene(){
-  if(scene>=SCENES.length-1){
-    done=true;
-    history.push({scene, who:"narr", text:"— your train's called and you head for it. The journey carries on from here: boarding, the ride, arriving, the thing at six — more situations would slot straight onto the same machine. (The profile on the right was built across the whole trip so far.)"});
-    renderJourney(); render(); setBusy(true);
-    document.getElementById("npcState").textContent="the journey continues…";
-    return;
-  }
+  if(scene>=SCENES.length-1) return;   // already at the open end (the train)
   scene++; enterScene();
 }
 
@@ -386,8 +396,11 @@ function render(){
   if(history.length===0){ stage.innerHTML=`<div class="waiting">Your journey is about to begin…</div>`; return; }
   let html="", lastScene=-1;
   for(const t of history){
-    if(t.scene!==lastScene && t.who==="narr"){ /* scene narration acts as divider */ }
-    lastScene=t.scene;
+    if(t.scene!==lastScene){
+      const s=SCENES[t.scene];
+      html+=`<div class="block"><span class="block-n">${t.scene+1}</span> ${escapeHtml(s.title)}</div>`;
+      lastScene=t.scene;
+    }
     if(t.who==="narr"){ html+=`<div class="narr">${escapeHtml(t.text)}</div>`; }
     else if(t.who==="tannoy"){ html+=`<div class="sys">${escapeHtml(t.text.replace(/^TANNOY:\s*/,""))}</div>`; }
     else if(t.who==="learner"){ html+=`<div class="turn learner-turn"><div><div class="name">You</div><div class="bubble">${escapeHtml(t.text)}</div></div></div>`; }
@@ -430,7 +443,7 @@ function pickVoice(kind){
   const gb=voices.filter(v=>/en[-_]GB/i.test(v.lang));
   const pool=gb.length?gb:voices.filter(v=>/^en/i.test(v.lang));
   if(!pool.length) return null;
-  const idx={driver:0,clerk:1,guard:2,passenger:3,tannoy:0,linh:3}[kind]||0;
+  const idx={driver:0,clerk:1,asker:2,seatmate:3,tannoy:0,linh:3}[kind]||0;
   return pool[Math.min(idx,pool.length-1)];
 }
 function speak(text,kind){
