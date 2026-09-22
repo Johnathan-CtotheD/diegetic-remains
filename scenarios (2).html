@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Catch your flight — airport journey PoC</title>
+<style>
+  :root{
+    --board:#0d1117; --board-2:#161d27; --amber:#ffb000; --amber-dim:#7a5600;
+    --platform:#eef1f4; --paper:#ffffff; --ink:#1a1f26; --ink-soft:#5b6672;
+    --br-red:#c8102e; --line:#d7dde3; --clerk:#e9eef3; --focus:#1b6ef3;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--platform);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
+  .mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+  .wrap{max-width:1120px;margin:0 auto;padding:20px 18px 60px}
+
+  header.sign{display:flex;align-items:center;gap:14px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:14px;margin-bottom:14px}
+  .arrows{color:var(--br-red);font-weight:800;font-size:24px;letter-spacing:-2px}
+  .sign h1{font-size:19px;margin:0;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+  .goal{margin-left:auto;font-size:13px;color:var(--ink-soft);border:1px solid var(--line);border-radius:2px;padding:5px 10px;background:var(--paper)}
+  .goal b{color:var(--ink)}
+
+  /* journey progress */
+  .journey{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+  .leg{flex:1;min-width:90px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;text-align:center;padding:6px 4px;border-radius:3px;background:#e2e7ec;color:#8a95a1;border:1px solid transparent}
+  .leg.done{background:#dfeee4;color:#2f7d4f}
+  .leg.now{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+  .toggle{display:flex;align-items:center;gap:8px;margin:2px 0 12px;font-size:13px;color:var(--ink-soft)}
+  .switch{position:relative;width:40px;height:22px;background:var(--line);border-radius:20px;cursor:pointer;transition:.15s;border:0;flex:none}
+  .switch::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.15s}
+  .switch.on{background:var(--ink)}
+  .switch.on::after{left:20px}
+  .mhint{color:var(--br-red);font-size:12px;margin-left:2px}
+
+  .grid{display:grid;grid-template-columns:1fr 340px;gap:18px;align-items:start}
+  @media(max-width:820px){.grid{grid-template-columns:1fr}}
+
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:4px;margin-bottom:14px;overflow:hidden}
+  .card > .head{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-soft);font-weight:700}
+  .head .tag{margin-left:auto;font-size:10px;color:var(--amber-dim);border:1px solid var(--amber-dim);border-radius:2px;padding:1px 6px;letter-spacing:.06em}
+
+  .board{background:var(--board);color:var(--amber);border-color:#000}
+  .board .head{color:#c9922e;border-bottom-color:#242c38}
+  .board table{width:100%;border-collapse:collapse;font-size:13px}
+  .board td,.board th{padding:7px 12px;text-align:left}
+  .board th{font-size:10px;color:#8a6a1e;letter-spacing:.08em;text-transform:uppercase;font-weight:600}
+  .board tbody tr{border-top:1px solid #1e2732}
+  .board .stat-ok{color:#39d353}
+  .board .stat-warn{color:#ff5a5a}
+  .board .stat-canc{color:#ff5a5a;text-decoration:line-through}
+
+  .vm .body{padding:12px}
+  .playbar{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .playbtn{border:1px solid var(--line);background:var(--platform);border-radius:40px;padding:5px 14px;font-size:13px;cursor:pointer;font-weight:600}
+  .playbtn:hover{border-color:var(--ink-soft)}
+  .vm .transcript{font-size:13.5px;color:var(--ink);background:var(--platform);border-radius:3px;padding:10px;display:none}
+  .vm.open .transcript{display:block}
+  .vm .hint{font-size:11px;color:var(--ink-soft);margin-top:6px}
+
+  .conv{min-height:440px;display:flex;flex-direction:column}
+  .conv .stage{padding:10px 12px;flex:1;overflow-y:auto;max-height:56vh}
+  .turn{margin:10px 0;display:flex}
+  .bubble{max-width:82%;padding:9px 13px;border-radius:14px;font-size:14.5px}
+  .npc-turn .bubble{background:var(--clerk);border-bottom-left-radius:3px}
+  .learner-turn{justify-content:flex-end}
+  .learner-turn .bubble{background:var(--ink);color:#fff;border-bottom-right-radius:3px}
+  .name{font-size:11px;color:var(--ink-soft);margin:0 6px 2px;text-transform:uppercase;letter-spacing:.07em}
+  .narr{margin:14px 8px;text-align:center;font-size:12.5px;color:var(--ink-soft);font-style:italic}
+  .block{display:flex;align-items:center;gap:9px;margin:20px 2px 6px;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink)}
+  .block::after{content:"";flex:1;height:2px;background:var(--ink);opacity:.12}
+  .block-n{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--ink);color:#fff;font-size:12px;letter-spacing:0}
+  .sys{margin:12px 6px;text-align:center;font-size:12px;color:var(--br-red);border-top:1px dashed #e2b7bd;border-bottom:1px dashed #e2b7bd;padding:7px 4px;letter-spacing:.03em}
+  .waiting{color:var(--ink-soft);font-size:13px;padding:8px 6px;font-style:italic}
+
+  .composer{border-top:1px solid var(--line);padding:10px;display:flex;gap:8px}
+  .composer input{flex:1;border:1px solid var(--line);border-radius:20px;padding:9px 14px;font-size:14.5px;font-family:inherit}
+  .composer input:focus{outline:2px solid var(--focus);outline-offset:1px;border-color:transparent}
+  .composer button{border:0;background:var(--ink);color:#fff;border-radius:20px;padding:9px 16px;font-size:14px;font-weight:600;cursor:pointer}
+  .composer button:disabled{opacity:.4;cursor:default}
+  .mic{border:1px solid var(--line);background:var(--paper);border-radius:20px;padding:9px 12px;font-size:15px;cursor:pointer;line-height:1}
+  .mic.live{border-color:var(--br-red);box-shadow:0 0 0 3px rgba(200,16,46,.15)}
+
+  .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+  .ghost{border:1px solid var(--line);background:var(--paper);border-radius:3px;padding:7px 11px;font-size:12.5px;cursor:pointer;font-weight:600;color:var(--ink)}
+  .ghost:hover{border-color:var(--ink-soft)}
+  .note{font-size:11.5px;color:var(--ink-soft);margin-top:10px;line-height:1.45}
+
+  .researcher.card{border-color:#000;background:var(--board);color:#c7d0da;position:sticky;top:14px}
+  .researcher .head{color:#fff;background:var(--board-2);border-bottom-color:#000}
+  .rgroup{padding:11px 12px;border-bottom:1px solid #1e2732;font-size:12.5px}
+  .rgroup:last-child{border-bottom:0}
+  .rlabel{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#7f8b98;margin-bottom:5px}
+  .hyp{color:#e7edf3;font-size:13.5px}
+  .coping{margin-top:8px;font-size:11px}
+  .cp{display:inline-block;padding:2px 8px;border-radius:20px;background:#1a222d;color:#9aa6b2;text-transform:capitalize}
+  .cp.comfortable{background:#12351f;color:#5fd08a}
+  .cp.stretched{background:#3a2f10;color:#e7c14e}
+  .cp.struggling{background:#3a1720;color:#ef7a8c}
+  .brk{display:flex;gap:6px;margin-top:8px}
+  .pip{flex:1;text-align:center;font-size:10px;text-transform:uppercase;letter-spacing:.06em;padding:4px 0;border-radius:2px;background:#1a222d;color:#5f6b78}
+  .pip.on{background:var(--amber);color:#241900;font-weight:700}
+  .counts{display:flex;gap:14px;align-items:baseline}
+  .bignum{font-size:30px;font-weight:800;color:var(--amber);font-family:ui-monospace,monospace;line-height:1}
+  .by{font-size:11.5px;color:#9aa6b2}
+  .by b{color:#e7edf3}
+  .log{max-height:200px;overflow-y:auto;font-size:11.5px;color:#95a1ad}
+  .log div{padding:4px 0;border-top:1px dotted #26303c}
+  .log div:first-child{border-top:0}
+  .log .d{color:#c9922e;font-family:ui-monospace,monospace;margin-right:6px}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+  #picker{padding:8px 2px 40px}
+  .pickintro{color:var(--ink-soft);font-size:14px;margin:0 0 20px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+  .scard{text-align:left;border:1px solid var(--line);background:var(--paper);border-radius:6px;padding:16px;cursor:pointer;font-family:inherit;transition:.12s}
+  .scard:hover{border-color:var(--ink);box-shadow:0 2px 0 var(--ink)}
+  .scard-t{font-size:16px;font-weight:800;color:var(--ink);margin-bottom:6px}
+  .scard-b{font-size:13px;color:var(--ink-soft);line-height:1.4}
+  .scard-go{margin-top:12px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--br-red)}
+  .backbtn{margin-left:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div id="picker">
+    <header class="sign">
+      <span class="arrows" aria-hidden="true">&#8644;</span>
+      <h1>Speaking scenarios</h1>
+    </header>
+    <p class="pickintro">Pick a journey. Each runs the learner through a series of real encounters, one character at a time.</p>
+    <div class="cards" id="cards"></div>
+  </div>
+
+  <div id="app" style="display:none">
+
+  <header class="sign">
+    <span class="arrows" aria-hidden="true">&#8644;</span>
+    <h1 id="scenarioTitle">Journey</h1>
+    <div class="goal" id="goalBanner">Your goal: <b>—</b></div>
+    <button class="ghost backbtn" id="backBtn">&#8592; Scenarios</button>
+  </header>
+
+  <div class="journey" id="journey"></div>
+
+  <div class="toggle">
+    <button id="rswitch" class="switch" role="switch" aria-checked="false" aria-label="Researcher view"></button>
+    <span>Researcher view <span id="rstate">off</span> — the profiling stream, running across the whole journey</span>
+  </div>
+  <div class="toggle">
+    <button id="sswitch" class="switch" role="switch" aria-checked="false" aria-label="Speech mode"></button>
+    <span>Speak <span id="sstate">off</span> — talk and hear the replies (best in Chrome/Edge) <span id="micHint" class="mhint"></span></span>
+  </div>
+
+  <div class="grid">
+    <div>
+      <div class="card board" id="boardCard">
+        <div class="head">Departures <span class="tag">check any time</span></div>
+        <table><thead><tr><th>Time</th><th>Destination</th><th>Plat</th><th>Status</th></tr></thead>
+        <tbody id="boardBody"></tbody></table>
+      </div>
+
+      <div class="card vm" id="vm">
+        <div class="head" id="vmHead">Message <span class="tag">replay any time</span></div>
+        <div class="body">
+          <div class="playbar">
+            <button class="playbtn" id="vmPlay">&#9654;&nbsp; Show / read</button>
+            <span class="hint" id="vmHint">&nbsp;</span>
+          </div>
+          <div class="transcript" id="vmText">&nbsp;</div>
+        </div>
+      </div>
+
+      <div class="card conv">
+        <div class="head" id="sceneHead">Your journey <span class="tag" id="npcState">&nbsp;</span></div>
+        <div class="stage" id="stage"></div>
+        <div class="composer">
+          <button id="micBtn" class="mic" title="Tap to speak" aria-label="Tap to speak" style="display:none">&#127908;</button>
+          <input id="say" type="text" placeholder="Type what you'd say…" autocomplete="off">
+          <button id="sendBtn">Say</button>
+        </div>
+      </div>
+
+      <div class="controls"><button class="ghost" id="resetBtn">Restart journey</button></div>
+      <div class="note" id="envNote"></div>
+    </div>
+
+    <div class="researcher card" id="researcher" style="display:none">
+      <div class="head">Profiling stream</div>
+      <div class="rgroup">
+        <div class="rlabel">Working hypothesis</div>
+        <div class="hyp" id="hyp">No evidence yet.</div>
+        <div class="coping" id="copingWrap" style="display:none">Now: <span class="cp" id="coping"></span></div>
+        <div class="brk" id="brk">
+          <span class="pip" data-b="gathering">gathering</span>
+          <span class="pip" data-b="emerging">emerging</span>
+          <span class="pip" data-b="stable">stable</span>
+        </div>
+      </div>
+      <div class="rgroup">
+        <div class="rlabel">Help metric — times the interlocutor had to scaffold</div>
+        <div class="counts"><div class="bignum" id="helpNum">0</div><div class="by" id="helpBy">none yet</div></div>
+      </div>
+      <div class="rgroup">
+        <div class="rlabel">Evidence log (whole journey)</div>
+        <div class="log" id="log"><div style="color:#5f6b78">Waiting for the first turn…</div></div>
+      </div>
+    </div>
+  </div>
+  </div><!-- /#app -->
+</div>
+
+<script>
+/* ---------------- scenes: the cast and the journey ---------------- */
+const AIRPORT_SCENES = [
+  {
+    id:"taxi", leg:"Taxi", title:"In the taxi to the airport", speaker:"driver", name:"Cabbie", demand:"A2",
+    shape:"transaction", goal:"pay the fare and get out at the terminal",
+    complete_when:"the fare has been paid and the passenger is getting out at the terminal",
+    opening:[{who:"narr",text:"A bright, busy morning. The taxi pulls up at Terminal 2 departures, cars nudging past on either side."},
+             {who:"driver",text:"Here we go — Terminal 2. That's twenty-two pounds, please."}],
+    system:()=>`You are a warm, chatty London cabbie dropping a passenger at the airport terminal; you've just said the
+fare is twenty-two pounds. Reply as the cabbie in ONE short, natural line — never ramble, never think out loud, never
+narrate your own change-making. You want your fare and to send them off with a friendly word. If they fumble the words,
+say it again simply or echo what they meant so they can use it — never explain English, teach, or quiz. Once they've
+paid (cash, card, or keep-the-change), wish them a good flight. You don't know where they're flying unless they say.`
+  },
+  {
+    id:"checkin", leg:"Check-in", title:"At the check-in desk", speaker:"checkin", name:"Check-in agent", demand:"B1",
+    shape:"transaction", goal:"check in for the flight to Barcelona",
+    complete_when:"the passenger is checked in — destination, passport and booking reference seen, any bag sorted, and a boarding pass handed over with the seat and gate",
+    opening:[{who:"narr",text:"Inside the terminal, you join the queue and reach the check-in desk."},
+             {who:"checkin",text:"Good morning! Where are you flying to today?"}],
+    system:()=>`You are a friendly, professional airline check-in agent. Reply ONLY as the agent, one or two short
+sentences, one thing at a time, unhurried. You are checking a passenger in for flight BA2490 to Barcelona (boarding
+14:30, gate 12). To check them in you need, in a natural order: their destination, their passport, their booking
+reference, and whether they have bags to check in or just hand luggage; you can offer a window or aisle seat if they
+have a preference. When it's done, hand over the boarding pass and tell them the gate (12) and boarding time (14:30).
+Ask only for what you genuinely need, one step at a time. If they don't follow you, say it again more simply or echo the
+right words back — never explain English, comment on their speech, teach or quiz.`
+  },
+  {
+    id:"security", leg:"Security", title:"At security", speaker:"security", name:"Security officer", demand:"B1",
+    shape:"transaction", goal:"get through the security check, sorting out whatever the scanner flags",
+    complete_when:"the passenger has put their things through, DEALT WITH the flagged item in their bag (explained it and emptied/binned/removed it as asked), and been cleared through — not merely on the first yes/no",
+    opening:[{who:"narr",text:"You follow the signs to security and reach the front of the line, trays stacked beside you."},
+             {who:"security",text:"Boarding pass, please. Bag and coat in the tray, and step through when I say."}],
+    system:()=>`You are an airport security officer — polite but brisk and official. Reply ONLY as the officer, one or two
+short sentences, one instruction at a time. Get the passenger's things into the tray and them through the scanner. THE
+KEY MOMENT: the scanner picks something up in their bag — a full bottle of water — and you stop them. You do not know
+what it is at first: ask the passenger to open the bag and tell you what it is ("there's something in your bag — can
+you open it and show me what that is?"). Make them explain it, then instruct them to deal with it: the bottle is over
+100ml, so it has to be emptied or binned before they can go through. This is COMPLIANCE, not negotiation — they explain
+and do as asked; you do not bargain or let a full bottle through. Once it's sorted and they're through the scanner,
+clear them and point them to the gates. If they don't follow you, repeat it more simply or point — never explain
+English, teach, or grade their speech. You are efficient and correct, never rude.`
+  },
+  {
+    id:"gate", leg:"Gate (seat problem)", title:"At the gate", speaker:"gate", name:"Gate agent", demand:"B2",
+    shape:"problem", goal:"sort out the seat change and get boarded",
+    complete_when:"the seat situation is resolved — the passenger has accepted a seat (their reassigned one, or one of the alternatives you offered) and knows they can board — NOT merely because a question was answered",
+    opening:[{who:"narr",text:"At gate 12 a screen reads \u201CBA2490 Barcelona — Boarding\u201D. The gate agent is working through a small queue."},
+             {who:"tannoy",text:"TANNOY: \u201CBoarding announcement for flight BA2490 to Barcelona. Due to an aircraft change, some seat assignments have been updated. Please check with the gate.\u201D"},
+             {who:"narr",text:"You reach the desk and hand over your boarding pass. The agent studies it."},
+             {who:"gate",text:"Ah — I'm sorry, we've had an aircraft change, so your seat's moved. You were in 14C, an aisle, but you're now in 23E, a middle seat."}],
+    system:()=>`You are a calm, capable gate agent for flight BA2490 to Barcelona, working a busy gate after a last-minute
+aircraft change. The passenger was booked in 14C (an aisle) and has been reassigned to 23E (a middle seat). You want to
+get them boarded and settled, and you genuinely want to help — but the flight is nearly full, so what you can offer is
+limited: you could do 28C (an aisle, near the back) or 10A (a window, further forward); there are no free pairs of seats
+and no extra legroom left. Reply ONLY as the gate agent, one or two short sentences at a time. Hear what they'd prefer,
+explain honestly what is and isn't possible, and settle on something with them — this is a small negotiation, not a
+script. Stay warm and professional even when you can't give them what they want; being busy is not being rude. If they
+struggle to say something, echo it back or offer the word — never explain English, teach, or grade them. Once a seat is
+agreed, confirm it and send them down to board.`
+  },
+  {
+    id:"boarding", leg:"Boarding", title:"Boarding the plane", speaker:"boarding", name:"Cabin crew", demand:"A2",
+    shape:"transaction", goal:"board the plane and be shown to the seat",
+    complete_when:"the passenger has shown their boarding pass and been directed to their seat",
+    opening:[{who:"narr",text:"You walk down the jet bridge to the aircraft door, where a crew member is greeting passengers."},
+             {who:"boarding",text:"Good morning, welcome aboard! Boarding pass, please?"}],
+    system:()=>`You are a warm cabin crew member greeting passengers at the aircraft door. Reply ONLY as the crew member,
+ONE short, friendly line. Greet them, glance at the boarding pass, point them to their seat (down to the left or right,
+by row), and welcome them aboard. Keep it brief and cheerful. If they fumble a word, echo it back kindly — never teach
+or quiz.`
+  },
+  {
+    id:"cabin", leg:"On the plane", title:"On the plane", speaker:"seatmate", name:"Your seatmate", demand:"B1",
+    shape:"social", goal:"open, unhurried conversation — no task, no ending",
+    complete_when:"never — this is the open end of the journey; the conversation simply continues",
+    opening:[{who:"narr",text:"You find your row and settle into your seat. As the plane pushes back from the gate, the person beside you looks over."},
+             {who:"seatmate",text:"Off to Barcelona too, then? Work, or something nicer?"}],
+    system:()=>{
+      const n = (typeof turnsInTrain==="function") ? turnsInTrain() : 0;
+      const close = n>=5 ? `
+
+You have now been chatting for a good while. On THIS turn you should wind the conversation down YOURSELF — do not ask another question. With a light touch, acknowledge you've been chattering on; if they mentioned something they're doing in Barcelona or something to prepare for, warmly say you'll let them get on with it; otherwise just wish them a good flight — then sign off. Something like: "Anyway, listen to me going on — I'll let you settle in. Enjoy Barcelona."` : "";
+      return `You are a friendly fellow traveller sharing a row on the plane, happy to make easy conversation — the
+flight, Barcelona, where they're off to, the day ahead. You just said "Off to Barcelona too, then? Work, or something
+nicer?" Reply ONLY as this seatmate, in SHORT turns — one or two sentences, never a monologue and never several
+questions crammed into one turn. But it is YOUR job to make the conversation: keep it going. Most turns, react to what
+they said and then move it forward — offer a thread or ask a light question so they always have something to respond to.
+Don't just agree and go quiet. Warm and sociable but NOT nosy — chat about the trip, Barcelona, the day ahead, rather
+than interrogating them about their private life. If they reach for a word, offer it without ever turning it into a
+lesson.${close}`;
+    }
+  }
+];
+
+const AIRPORT_BOARD_BEFORE = [
+  ["14:30","Barcelona","12","Boarding","stat-ok"],
+  ["14:55","Amsterdam","8","On time","stat-ok"],
+  ["15:20","Dublin","21","Gate open","stat-ok"],
+];
+const AIRPORT_BOARD_DISRUPT = [
+  ["14:30","Barcelona","12","Final call","stat-warn"],
+  ["14:55","Amsterdam","8","Boarding","stat-ok"],
+  ["15:20","Dublin","21","On time","stat-ok"],
+];
+
+const STATION_SCENES = [
+  {
+    id:"taxi", leg:"Taxi", title:"In the taxi", speaker:"driver", name:"Cabbie", demand:"A2",
+    shape:"transaction", goal:"pay the fare and get out at the station",
+    complete_when:"the fare has been paid and the passenger is heading off",
+    opening:[{who:"narr",text:"A grey afternoon. The taxi slows to a stop outside the station, meter still ticking."},
+             {who:"driver",text:"Righto, here we are — that's eighteen fifty, please."}],
+    system:()=>`You are a warm, chatty London cabbie dropping a passenger outside the station; you've just said the
+fare is eighteen fifty. Reply as the cabbie in ONE short, natural line — never ramble, never think out loud, never
+narrate your own change-making. You want your fare and to send them off with a friendly word. If they fumble the
+words, say it again simply or echo what they meant so they can use it — never explain English, teach, or quiz. Once
+they've paid (cash, card, or keep-the-change), wish them a good journey. You don't know where they're going unless
+they tell you.`
+  },
+  {
+    id:"tickets", leg:"Ticket window", title:"At the ticket window", speaker:"clerk", name:"Dave · clerk", demand:"B1",
+    shape:"transaction", goal:"buy a ticket to Brighton",
+    complete_when:"a ticket to Brighton has been bought — destination, single/return, any needed detail, and payment all settled",
+    opening:[{who:"narr",text:"Inside, you go to the ticket window. Dave is behind the counter, sorting tickets — he hasn't noticed you yet."}],
+    system:()=>`You are Dave, a ticket clerk at a British railway station — pleasant, brisk, ordinary. Reply as Dave
+only, one or two short sentences. You know: the next direct Brighton train is 16:50, platform 4, in at 17:35; a
+return is £24; the 16:35 was cancelled. Ask only what you need to sell the ticket. If the passenger doesn't follow
+you, say it again more simply or echo the right words back so they can reuse them — but never explain English words,
+comment on how they speak, teach or quiz. You don't know why or by when they're travelling unless they tell you.`
+  },
+  {
+    id:"platform_ask", leg:"A passenger asks you", title:"Finding the platform", speaker:"asker", name:"A passenger", demand:"B1",
+    shape:"info-giving", goal:"tell the passenger which platform the Brighton train leaves from",
+    complete_when:"the passenger has the platform, any brief follow-up has been answered, and they are thanking you or heading off — NOT the instant the platform is first named",
+    opening:[{who:"narr",text:"Ticket in hand, you step out onto the concourse."},
+             {who:"tannoy",text:"TANNOY: \u201CPlatform alteration: the 16:50 service to Brighton will now depart from platform 6. Platform 6 for the 16:50 Brighton.\u201D"},
+             {who:"narr",text:"A passenger with a heavy bag turns to you, looking a little lost."},
+             {who:"asker",text:"Sorry to bother you — you don't know which platform the Brighton train goes from, do you?"}],
+    system:()=>`You are a fellow passenger on the station concourse, a bit flustered and running late — heavy bag, not
+great eyesight for the boards — who has just asked this person whether they know which platform the Brighton train
+leaves from. You are genuinely unsure of the platform yourself and are hoping they can help. Be natural: you can wonder
+aloud the way a real person does ("was it five or six? I can never read those boards"), but don't confidently state the
+platform as if you know it — you're relying on them to confirm it. Reply ONLY as this passenger, one short natural line
+at a time. Once they give you a platform, react warmly and you may ask one brief follow-up (is that the fast one? are
+you headed that way too?) before thanking them and heading off. If they struggle for words, be a patient listener and
+offer a single word only if they're truly stuck — never teach or correct them.`
+  },
+  {
+    id:"train", leg:"On the train", title:"On the train", speaker:"seatmate", name:"Your seatmate", demand:"B1",
+    shape:"social", goal:"open, unhurried conversation — no task, no ending",
+    complete_when:"never — this is the open end of the journey; the conversation simply continues",
+    opening:[{who:"narr",text:"You make it aboard with moments to spare and drop into a seat. As the train pulls away, the person beside you glances up from their book."},
+             {who:"seatmate",text:"Made it, then — cutting it fine! Off to Brighton yourself?"}],
+    system:()=>{
+      const n = (typeof turnsInTrain==="function") ? turnsInTrain() : 0;
+      const close = n>=5 ? `
+
+You have now been chatting for a good while. On THIS turn you should wind the conversation down YOURSELF — do not ask another question. With a light touch, acknowledge you've been chattering on; if they mentioned somewhere to be or something to prepare for, warmly say you'll let them get on with it; otherwise just wish them a good rest of their journey — then sign off. Something like: "Anyway, listen to me going on — I'll let you get on. Safe travels."` : "";
+      return `You are a friendly fellow traveller sharing a train seat, happy to make easy conversation — the journey,
+the weather, where they're off to. You just said "Made it, then — cutting it fine! Off to Brighton yourself?" Reply
+ONLY as this seatmate, in SHORT turns — one or two sentences, never a monologue and never several questions crammed
+into one turn. But it is YOUR job to make the conversation: keep it going. Most turns, react to what they said and then
+move it forward — offer a thread or ask a light question so they always have something to respond to. Don't just agree
+and go quiet. Warm and sociable but NOT nosy — chat about the journey, the view, the day ahead, the world going past,
+rather than interrogating them about their private life. If they reach for a word, offer it without ever turning it into
+a lesson.${close}`;
+    }
+  }
+];
+const STATION_BOARD_BEFORE = [
+  ["16:35","Brighton","—","Cancelled","stat-canc"],
+  ["16:50","Brighton","4","On time","stat-ok"],
+  ["17:10","Gatwick Airport","2","On time","stat-ok"],
+];
+const STATION_BOARD_DISRUPT = [
+  ["16:50","Brighton","6","Platform changed","stat-warn"],
+  ["17:10","Gatwick Airport","2","On time","stat-ok"],
+  ["17:40","Brighton","4","On time","stat-ok"],
+];
+
+// ---- booking call: learner is the customer, phone channel, no visual scaffolding ----
+const BOOKING_SCENES = [
+  {
+    id:"bookingbot", leg:"Automated line", title:"The automated booking line", speaker:"bot", name:"Automated system", demand:"B1",
+    shape:"transaction", goal:"give the automated system your trip details clearly and be transferred to an agent",
+    complete_when:"the departure city, destination, travel date, and number of passengers have EACH been given clearly and confirmed, and the system says it is transferring to an agent",
+    opening:[{who:"narr",text:"You dial the airline's booking line. It rings twice, then an automated voice answers."},
+             {who:"bot",text:"Welcome to SkyBook automated booking. To begin, please say the city you are flying FROM."}],
+    system:()=>`You are an AUTOMATED telephone booking system — flat, precise, literal and pedantic. You are NOT a
+person: you do not chat, sympathise, accommodate, guess, or rephrase to help. Collect FOUR things, ONE at a time, in
+this fixed order: (1) departure city, (2) destination city, (3) date of travel, (4) number of passengers. After the
+caller answers each one, READ IT BACK and ask them to confirm: "I heard 'Barcelona'. Is that correct? Please say yes
+or no." If they say no, ask for that item again. If what they say is unclear, unintelligible, half a word, or
+ambiguous, do NOT guess and do NOT help them find the words — say you did not understand and ask them to say that one
+thing again, clearly: "I'm sorry, I did not catch that. Please say the destination city again, clearly." Never move to
+the next item until the current one is clearly given AND confirmed. Keep every line short and system-like. When all
+four are confirmed, tell them you are transferring them to an agent and to hold the line.`
+  },
+  {
+    id:"bookingagent", leg:"The agent", title:"Speaking to the agent", speaker:"agent", name:"Booking agent", demand:"B2",
+    shape:"problem", goal:"complete the booking with the agent",
+    complete_when:"the booking is settled — a flight and time chosen, the return confirmed, and payment taken — NOT merely because a question was answered",
+    opening:[{who:"narr",text:"There's a click and a short burst of hold music, then a real voice comes on the line."},
+             {who:"agent",text:"Hello, you're through to bookings — I've got London to Barcelona for one, the fourteenth. What sort of time did you want to fly out?"}],
+    system:()=>`You are a real human booking agent on the phone, picking up after the automated system passed along the
+basics (London to Barcelona, one passenger, 14 June, returning 21 June). You are helpful and co-constructive — you
+fill gaps, offer real options, and work WITH the caller to get them booked. Reply ONLY as the agent, one or two short
+sentences at a time. Offer choices and settle them together: a morning flight (£120) or an evening one (£95); confirm
+the return on the 21st; take a card at the end. BUT you are on a busy line and a little impatient when things aren't
+clear — if the caller is vague or you can't follow them, show mild, polite impatience and press for a clear answer
+("Sorry — which one, morning or evening?") WITHOUT ever being rude or unkind. You co-construct meaning, but you won't
+do all the work for them if they're unclear. If they truly can't find a word you can supply it, but briefly. Once a
+flight is chosen, the return confirmed, and payment taken, tell them the booking is done and give a reference.`
+  }
+];
+
+// ---- the registry: each entry is one journey; adding another is just another entry ----
+const SCENARIOS = {
+  airport: {
+    title:"Catch your flight",
+    blurb:"Airport journey — taxi to the plane, six encounters, a seat to negotiate at the gate.",
+    goal:"make flight BA2490 to Barcelona — boarding 14:30, gate 12",
+    socialId:"cabin", disruptId:"gate",
+    message:{ header:"Message &middot; Booking confirmation", hint:"Your booking details — open any time.",
+      html:`&ldquo;Booking confirmed — flight <b>BA2490</b>, London to Barcelona, today. Booking reference <b>BX-4471</b>. Please have this reference and your passport ready at check-in. Boarding 14:30, gate 12.&rdquo;`,
+      spoken:"Booking confirmed. Flight B A two four nine zero, London to Barcelona, today. Booking reference B X four four seven one. Please have this reference and your passport ready at check-in. Boarding fourteen thirty, gate twelve." },
+    scenes:AIRPORT_SCENES, boardBefore:AIRPORT_BOARD_BEFORE, boardDisrupt:AIRPORT_BOARD_DISRUPT
+  },
+  booking: {
+    title:"Book a flight (by phone)",
+    blurb:"A phone call — get your trip past a pedantic automated system, then finish the booking with a real agent who's helpful but a little impatient.",
+    goal:"book your return flight to Barcelona over the phone",
+    socialId:"", disruptId:"", noBoard:true,
+    message:{ header:"Your trip &middot; the details to book", hint:"What you're calling to book — say each part clearly when asked.",
+      html:`From: <b>London</b> &nbsp;&middot;&nbsp; To: <b>Barcelona</b> &nbsp;&middot;&nbsp; Out: <b>14 June</b> &nbsp;&middot;&nbsp; Back: <b>21 June</b> &nbsp;&middot;&nbsp; Passengers: <b>1</b>`,
+      spoken:"Your trip. From London to Barcelona. Out on the fourteenth of June, back on the twenty-first of June. One passenger." },
+    scenes:BOOKING_SCENES, boardBefore:[], boardDisrupt:[]
+  },
+  station: {
+    title:"Get to Brighton",
+    blurb:"Railway journey — taxi to the train, four encounters; a stranger asks you the platform.",
+    goal:"be in Brighton before 18:00",
+    socialId:"train", disruptId:"platform_ask",
+    message:{ header:"Message &middot; Linh", hint:"Nobody in the station can hear this — it's yours.",
+      html:`&ldquo;Hi, it's Linh! Don't forget the thing starts at six on the dot, so you have to be in Brighton <b>before six</b>. Don't be late — see you there!&rdquo;`,
+      spoken:"Hi, it's Linh! Don't forget the thing starts at six on the dot, so you have to be in Brighton before six. Don't be late, see you there!" },
+    scenes:STATION_SCENES, boardBefore:STATION_BOARD_BEFORE, boardDisrupt:STATION_BOARD_DISRUPT
+  }
+};
+
+// the engine reads these; a scenario fills them in on start
+let SCENES=[], BOARD_BEFORE=[], BOARD_DISRUPT=[], SOCIAL_ID="", DISRUPT_ID="", MSG_SPOKEN="", ACTIVE=null;
+
+let scene=0, history=[], helps=[], hyp="No evidence yet.", coping=null, bracket=null, log=[], busy=false, done=false;
+
+/* ---------------- model plumbing (via your Netlify proxy) ---------------- */
+async function claude(system, messages, wantJson){
+  const res = await fetch("/.netlify/functions/chat",{
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({ max_tokens:1000, system, messages })
+  });
+  if(!res.ok) throw new Error("proxy "+res.status);
+  const data = await res.json();
+  let text = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim();
+  if(wantJson){ text = text.replace(/```json/gi,"").replace(/```/g,"").trim(); return JSON.parse(text); }
+  return text;
+}
+
+/* STREAM 1 — the NPC of the current scene. Sees only this scene's dialogue. */
+function sceneMessages(){
+  const sp = SCENES[scene].speaker;
+  const turns = history
+    .filter(t=>t.scene===scene && (t.who==="learner"||t.who===sp))
+    .map(t=>({role:t.who==="learner"?"user":"assistant", content:t.text}));
+  while(turns.length && turns[0].role!=="user") turns.shift();  // must start on the learner
+  return turns;
+}
+
+/* STREAM 2 — the profiler. Reads the whole journey; told the current scene's demand. */
+function profilerSystem(){
+  const s=SCENES[scene];
+  return `You silently observe a learner of English going through a series of real-world spoken encounters (this run
+may be an airport journey, a railway journey, or a phone call to book a flight). You never speak to the learner. You
+are building ONE running profile of their working level across the whole run.
+
+Current scene: ${s.title}. Demand level: ${s.demand}. Interaction shape: ${s.shape}. What "done" means here: ${s.complete_when}.
+
+This scene is a "${s.shape}" interaction, and completion depends on that shape, NOT on a checklist of filled slots:
+ - transaction: done when the deal or procedure is closed (${s.complete_when}). Note some transactions are with an inflexible automated system that will not accommodate the learner — there, judge how clearly and intelligibly the learner makes themselves understood, and mark done only once every required item is clearly given and confirmed.
+ - info-giving: the learner HOLDS the information the other person needs. Judge whether they can PRODUCE it; done once they've conveyed it and the brief exchange is closing (thanked / heading off), not the instant it is first named.
+ - problem: a situation to resolve or negotiate. Done only when it is actually settled — an option accepted, a booking confirmed — NOT merely because a question was answered. Judge how they negotiate and explain, not just whether they replied.
+ - social: there is NO task and NO ending — this is the open end of the journey. Always return scene_goal_met false; never try to close it.
+
+From the learner's latest turn, and everything so far, return one JSON object and nothing else:
+"coping": "comfortable" | "stretched" | "struggling" — how the learner is managing at THIS scene's demand (${s.demand}).
+"scaffold_needed": true if the interlocutor had to actively help the learner produce or be understood this turn —
+  recasting, supplying a word, repairing a breakdown. false if the learner managed on their own (an ordinary clarifying
+  question the learner handles is false). Judge the LEARNER, not the speech recogniser; ignore garbled input that looks
+  like a mishearing.
+"scene_goal_met": true only if this "${s.shape}" interaction is complete in the sense above (${s.complete_when}).
+"hypothesis": one short can-do phrase — what the learner can do and where they fray. Build it across scenes; never reset.
+"bracket": "gathering" | "emerging" | "stable". Only "stable" once you have seen the learner across at least two
+  different scene demands and know roughly where they cope and where they strain.
+"reason": one short sentence of evidence for the log.
+Return JSON only.`;
+}
+
+/* ---------------- turn handling ---------------- */
+function turnsInTrain(){ return history.filter(t=>t.who==="learner" && SCENES[t.scene] && SCENES[t.scene].id===SOCIAL_ID).length; }
+async function learnerSays(text){
+  if(busy||done) return;
+  history.push({scene, who:"learner", text});
+  render(); setBusy(true); npcState(true);
+  let reply;
+  try{
+    reply = await claude(SCENES[scene].system(), sceneMessages(), false);
+  }catch(e){
+    npcState(false);
+    history.push({scene, who:"narr", text:"(the line dropped — tap Say to try again)"});
+    setBusy(false); render(); return;
+  }
+  npcState(false);
+  history.push({scene, who:SCENES[scene].speaker, text:reply});
+  render(); speak(reply, SCENES[scene].speaker);
+
+  // profiler runs in its OWN guard: a JSON hiccup must never drop the turn or bleed a scene
+  let goalMet=false;
+  try{
+    const prof = await claude(profilerSystem(), [{role:"user",content:
+      "Journey transcript so far:\n"+transcript()+"\n\nAssess the latest LEARNER turn against this scene's demand."}], true);
+    if(prof){
+      applyProfile(prof);
+      if(prof.scaffold_needed) helps.push({demand:SCENES[scene].demand});
+      renderResearcher();
+      goalMet = !!prof.scene_goal_met;
+    }
+  }catch(e){ /* profiler hiccup — skip this turn's read, carry on */ }
+
+  // hand off with input STILL LOCKED, so a fast learner can't fire a turn into the gap
+  if(goalMet && scene < SCENES.length-1){
+    await new Promise(r=>setTimeout(r, 900));
+    advanceScene();
+  }
+  // a non-social LAST scene ends the run when its own goal is met (e.g. the booking is confirmed)
+  if(goalMet && scene === SCENES.length-1 && SCENES[scene].id!==SOCIAL_ID){
+    done=true;
+    history.push({scene, who:"narr", text:"— all done. The profile on the right was built across the whole thing."});
+    renderJourney();
+  }
+  // a social endpoint winds itself up after a good stretch — the bot ends it, not the user
+  if(SCENES[scene].id===SOCIAL_ID && turnsInTrain()>=5){
+    done=true;
+    history.push({scene, who:"narr", text:"You settle back with your notes as the journey rolls on. — the profile on the right was built across the whole run."});
+    renderJourney();
+  }
+  setBusy(done); render();
+}
+
+function applyProfile(p){
+  if(!p) return;
+  if(p.hypothesis) hyp=p.hypothesis;
+  if(p.bracket) bracket=p.bracket;
+  if(p.coping) coping=p.coping;
+  const stamp=new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"});
+  log.unshift({t:stamp, scene:SCENES[scene].leg, demand:SCENES[scene].demand, note:p.reason||"(no note)", scaffold:!!p.scaffold_needed});
+}
+
+function enterScene(){
+  const s=SCENES[scene];
+  (s.opening||[]).forEach(o=>{
+    history.push({scene, who:o.who, text:o.text});
+    if(o.who!=="narr") speak(o.text, o.who);
+  });
+  if(s.id===DISRUPT_ID){ drawBoard(true); }
+  render(); renderJourney();
+}
+function advanceScene(){
+  if(scene>=SCENES.length-1) return;   // already at the open end (the train)
+  scene++; enterScene();
+}
+
+/* ---------------- rendering ---------------- */
+function transcript(){
+  return history.map(t=>{
+    const tag = t.who==="learner"?"LEARNER":t.who==="narr"?"(scene)":t.who==="tannoy"?"ANNOUNCEMENT":SCENES.find(s=>s.speaker===t.who)?.name.toUpperCase()||t.who.toUpperCase();
+    return tag+": "+t.text;
+  }).join("\n");
+}
+function drawBoard(disrupt){
+  const rows = disrupt ? BOARD_DISRUPT : BOARD_BEFORE;
+  document.getElementById("boardBody").innerHTML = rows.map(r=>
+    `<tr><td class="mono">${r[0]}</td><td>${r[1]}</td><td class="mono">${r[2]}</td><td class="${r[4]}">${r[3]}</td></tr>`).join("");
+}
+function npcState(thinking){
+  document.getElementById("npcState").textContent = thinking ? "…thinking" : (done?"journey complete":SCENES[scene].name.replace(/·.*/,"").trim()+" is here");
+  document.getElementById("sceneHead").firstChild.textContent = SCENES[scene].title+" ";
+}
+function speakerName(who){ const s=SCENES.find(x=>x.speaker===who); return s?s.name:who; }
+function render(){
+  const stage=document.getElementById("stage");
+  document.getElementById("sceneHead").firstChild.textContent = SCENES[scene].title+" ";
+  if(history.length===0){ stage.innerHTML=`<div class="waiting">Your journey is about to begin…</div>`; return; }
+  let html="", lastScene=-1;
+  for(const t of history){
+    if(t.scene!==lastScene){
+      const s=SCENES[t.scene];
+      html+=`<div class="block"><span class="block-n">${t.scene+1}</span> ${escapeHtml(s.title)}</div>`;
+      lastScene=t.scene;
+    }
+    if(t.who==="narr"){ html+=`<div class="narr">${escapeHtml(t.text)}</div>`; }
+    else if(t.who==="tannoy"){ html+=`<div class="sys">${escapeHtml(t.text.replace(/^TANNOY:\s*/,""))}</div>`; }
+    else if(t.who==="learner"){ html+=`<div class="turn learner-turn"><div><div class="name">You</div><div class="bubble">${escapeHtml(t.text)}</div></div></div>`; }
+    else { html+=`<div class="turn npc-turn"><div><div class="name">${escapeHtml(speakerName(t.who))}</div><div class="bubble">${escapeHtml(t.text)}</div></div></div>`; }
+  }
+  stage.innerHTML=html; stage.scrollTop=stage.scrollHeight;
+}
+function renderJourney(){
+  const legs = SCENES.map((s,i)=>{
+    const cls = i<scene||done&&i<=scene ? "leg done" : i===scene ? "leg now" : "leg";
+    return `<div class="${cls}">${s.leg}</div>`;
+  });
+  legs.push(`<div class="leg" style="opacity:.5">…continues</div>`);
+  document.getElementById("journey").innerHTML = legs.join("");
+}
+function renderResearcher(){
+  document.getElementById("hyp").textContent=hyp;
+  const cw=document.getElementById("copingWrap");
+  if(coping){ cw.style.display=""; const c=document.getElementById("coping"); c.textContent=coping; c.className="cp "+coping; }
+  document.querySelectorAll("#brk .pip").forEach(p=>p.classList.toggle("on", p.dataset.b===bracket));
+  document.getElementById("helpNum").textContent=helps.length;
+  const by={}; helps.forEach(h=>by[h.demand]=(by[h.demand]||0)+1);
+  const keys=Object.keys(by).sort();
+  document.getElementById("helpBy").innerHTML = keys.length ? keys.map(k=>`<b>${by[k]}</b> at ${k}`).join(" &middot; ") : "none yet";
+  document.getElementById("log").innerHTML = log.length
+    ? log.map(l=>`<div><span class="d">${l.t}</span>[${l.demand} · ${escapeHtml(l.scene)}] ${escapeHtml(l.note)} ${l.scaffold?'<span style="color:#ffb000">·scaffolded</span>':''}</div>`).join("")
+    : `<div style="color:#5f6b78">Waiting for the first turn…</div>`;
+}
+function escapeHtml(s){return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]))}
+function setBusy(b){ busy=b; document.getElementById("sendBtn").disabled=b; document.getElementById("say").disabled=b; }
+
+/* ---------------- speech (rough browser Web Speech API) ---------------- */
+let speechOn=false, recog=null, listening=false;
+const SR = window.SpeechRecognition||window.webkitSpeechRecognition;
+const synth = window.speechSynthesis||null;
+let voices=[];
+function loadVoices(){ if(synth) voices=synth.getVoices()||[]; }
+if(synth){ loadVoices(); synth.onvoiceschanged=loadVoices; }
+function pickVoice(kind){
+  const gb=voices.filter(v=>/en[-_]GB/i.test(v.lang));
+  const pool=gb.length?gb:voices.filter(v=>/^en/i.test(v.lang));
+  if(!pool.length) return null;
+  const idx={driver:0,checkin:1,security:2,gate:3,boarding:4,seatmate:5,tannoy:2,message:1,bot:2,agent:0}[kind]||0;
+  return pool[Math.min(idx,pool.length-1)];
+}
+function speak(text,kind){
+  if(!speechOn||!synth||!text) return;
+  try{
+    if(recog&&listening) recog.stop();
+    synth.cancel();
+    const u=new SpeechSynthesisUtterance(String(text).replace(/[\u201C\u201D]/g,'"').replace(/^TANNOY:\s*/,""));
+    const v=pickVoice(kind); if(v){u.voice=v;u.lang=v.lang;} else u.lang="en-GB";
+    u.rate=kind==="tannoy"?0.96:1.02; synth.speak(u);
+  }catch(e){}
+}
+function setListen(b){ listening=b; const m=document.getElementById("micBtn"); if(m) m.classList.toggle("live",b); }
+function micHint(t){ const h=document.getElementById("micHint"); if(h) h.textContent=t||""; }
+function startListen(){
+  if(!speechOn||!SR) return;
+  if(synth) synth.cancel();
+  if(!recog){
+    recog=new SR(); recog.lang="en-GB"; recog.interimResults=false; recog.maxAlternatives=1; recog.continuous=false;
+    recog.onresult=e=>{ document.getElementById("say").value=e.results[0][0].transcript; setListen(false); micHint("check what it heard, then press Say"); const inp=document.getElementById("say"); inp.focus(); inp.selectionStart=inp.value.length; };
+    recog.onerror=e=>{ setListen(false); const m={"not-allowed":"mic blocked by the browser","service-not-allowed":"speech service blocked here","network":"speech service unreachable","audio-capture":"no microphone found","no-speech":"didn’t hear anything — tap and speak"}; micHint(m[e.error]||("mic error: "+e.error)); };
+    recog.onend=()=>setListen(false);
+  }
+  try{ recog.start(); setListen(true); micHint("listening…"); }
+  catch(err){ setListen(false); micHint("couldn’t start the mic: "+(err.name||err.message)); }
+}
+
+/* ---------------- wiring ---------------- */
+function send(){ const inp=document.getElementById("say"); const v=inp.value.trim(); if(!v||busy||done) return; inp.value=""; learnerSays(v); }
+function reset(){
+  scene=0; history=[]; helps=[]; hyp="No evidence yet."; coping=null; bracket=null; log=[]; done=false;
+  if(synth) synth.cancel(); setListen(false); micHint(""); setBusy(false);
+  document.getElementById("vm").classList.remove("open");
+  document.getElementById("vmPlay").innerHTML="&#9654;&nbsp; Show / read";
+  document.getElementById("coping").className="cp"; document.getElementById("copingWrap").style.display="none";
+  document.getElementById("npcState").textContent="";
+  drawBoard(false); enterScene(); renderResearcher();
+}
+document.getElementById("sendBtn").onclick=send;
+document.getElementById("say").addEventListener("keydown",e=>{if(e.key==="Enter")send();});
+document.getElementById("resetBtn").onclick=reset;
+document.getElementById("vmPlay").onclick=function(){
+  const vm=document.getElementById("vm"); vm.classList.toggle("open");
+  this.innerHTML=vm.classList.contains("open")?"&#10073;&#10073;&nbsp; Showing message":"&#9654;&nbsp; Show / read";
+  if(speechOn&&vm.classList.contains("open")) speak(MSG_SPOKEN,"message");
+};
+document.getElementById("rswitch").onclick=function(){
+  const on=!this.classList.contains("on"); this.classList.toggle("on",on); this.setAttribute("aria-checked",on);
+  document.getElementById("researcher").style.display=on?"":"none"; document.getElementById("rstate").textContent=on?"on":"off";
+};
+document.getElementById("sswitch").onclick=function(){
+  if(!SR&&!synth){ document.getElementById("sstate").textContent="not supported here"; return; }
+  speechOn=!this.classList.contains("on"); this.classList.toggle("on",speechOn); this.setAttribute("aria-checked",speechOn);
+  document.getElementById("sstate").textContent=speechOn?"on":"off";
+  document.getElementById("micBtn").style.display=(speechOn&&SR)?"":"none";
+  micHint(speechOn&&!SR?"voice replies only — mic needs Chrome/Edge":"");
+  if(!speechOn&&synth) synth.cancel();
+};
+document.getElementById("micBtn").onclick=()=>{ (listening&&recog)?recog.stop():startListen(); };
+document.getElementById("envNote").innerHTML =
+  "Each scene is a different character; one running profile across the whole journey. Each NPC sees only its own scene "+
+  "and scaffolds in role — there's no outside helper. The profiler reads the whole journey and sets demand by the scene "+
+  "you're in, so the level tags stop chasing each sentence. Model calls go through your Netlify function.";
+
+/* ---------------- scenario picker ---------------- */
+function renderPicker(){
+  document.getElementById("cards").innerHTML = Object.keys(SCENARIOS).map(id=>{
+    const s=SCENARIOS[id];
+    return `<button class="scard" onclick="startScenario('${id}')"><div class="scard-t">${s.title}</div><div class="scard-b">${s.blurb}</div><div class="scard-go">Start &#8594;</div></button>`;
+  }).join("");
+}
+function startScenario(id){
+  const s=SCENARIOS[id]; if(!s) return;
+  ACTIVE=id;
+  SCENES=s.scenes; BOARD_BEFORE=s.boardBefore; BOARD_DISRUPT=s.boardDisrupt;
+  SOCIAL_ID=s.socialId; DISRUPT_ID=s.disruptId; MSG_SPOKEN=s.message.spoken;
+  document.getElementById("scenarioTitle").textContent=s.title;
+  document.getElementById("goalBanner").innerHTML="Your goal: <b>"+s.goal+"</b>";
+  document.getElementById("vmHead").innerHTML=s.message.header+' <span class="tag">replay any time</span>';
+  document.getElementById("vmHint").textContent=s.message.hint;
+  document.getElementById("vmText").innerHTML=s.message.html;
+  document.getElementById("boardCard").style.display = s.noBoard ? "none" : "";
+  document.getElementById("picker").style.display="none";
+  document.getElementById("app").style.display="";
+  reset();
+}
+function toPicker(){
+  if(synth) synth.cancel(); setListen(false);
+  document.getElementById("app").style.display="none";
+  document.getElementById("picker").style.display="";
+}
+document.getElementById("backBtn").onclick=toPicker;
+
+renderPicker();
+</script>
+</body>
+</html>
